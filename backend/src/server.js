@@ -21,10 +21,18 @@ const normalizeOrigin = (origin) => {
   }
 };
 
+const developmentOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+];
+
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
   .map(normalizeOrigin)
-  .filter(Boolean);
+  .filter(Boolean)
+  .concat(process.env.NODE_ENV === "production" ? [] : developmentOrigins);
 
 app.use(
   cors({
