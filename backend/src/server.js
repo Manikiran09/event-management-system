@@ -11,7 +11,15 @@ dotenv.config();
 
 const app = express();
 
-const normalizeOrigin = (origin) => origin.trim().replace(/\/$/, "").toLowerCase();
+const normalizeOrigin = (origin) => {
+  const value = origin.trim();
+
+  try {
+    return new URL(value).origin.toLowerCase();
+  } catch {
+    return value.replace(/\/$/, "").toLowerCase();
+  }
+};
 
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
