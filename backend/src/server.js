@@ -11,15 +11,24 @@ dotenv.config();
 
 const app = express();
 
+const normalizeOrigin = (origin) => origin.trim().replace(/\/$/, "").toLowerCase();
+
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
-  .map((origin) => origin.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = normalizeOrigin(origin);
+
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin)) {
         callback(null, true);
         return;
       }
