@@ -53,11 +53,17 @@ Frontend runs at `http://localhost:5173`.
 	- Build Command: `npm install`
 	- Start Command: `npm start`
 4. Add environment variables in Render:
-	- `MONGO_URI`
-	- `JWT_SECRET`
-	- `JWT_EXPIRES_IN` (example: `1d`)
-	- `ADMIN_REGISTRATION_KEY`
-	- `FRONTEND_URL` (your GitHub Pages URL)
+	- `MONGO_URI=mongodb+srv://admin:123@cluster0.fu6jdht.mongodb.net/event_management?retryWrites=true&w=majority&appName=Cluster0`
+	- `JWT_SECRET=dev-secret-change-this`
+	- `JWT_EXPIRES_IN=1d` 
+	- `ADMIN_REGISTRATION_KEY=admin-secret-key`
+	- `PORT=5112`
+ 	- `FRONTEND_URL=http://localhost:5173`
+
+
+
+
+
 5. Deploy and copy your backend URL (example: `https://your-app.onrender.com`).
 
 You can also deploy with the Render blueprint file at `render.yaml`.
