@@ -1,0 +1,81 @@
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { ArrowRightIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
+
+const TopNav = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const linkClass = (path) =>
+    `rounded-full px-4 py-1.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white ${
+      location.pathname === path ? "bg-white/10 text-white" : ""
+    }`;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link to="/dashboard" className="flex items-center gap-3 rounded-full bg-white/10 px-4 py-2 text-base font-bold tracking-tight text-white md:text-lg">
+            <IconShell className="bg-teal-500/20 text-teal-200">
+              <span className="text-sm font-black">E</span>
+            </IconShell>
+            EventHub
+          </Link>
+          <nav className="flex flex-wrap items-center gap-2">
+            <Link className={linkClass("/dashboard")} to="/dashboard">
+              <span className="inline-flex items-center gap-2">
+                <DashboardIcon className="h-4 w-4" />
+                Dashboard
+              </span>
+            </Link>
+            <Link className={linkClass("/events")} to="/events">
+              <span className="inline-flex items-center gap-2">
+                <EventsIcon className="h-4 w-4" />
+                Events
+              </span>
+            </Link>
+            {user?.role === "admin" ? (
+              <Link className={linkClass("/admin/users")} to="/admin/users">
+                <span className="inline-flex items-center gap-2">
+                  <UsersIcon className="h-4 w-4" />
+                  User Controls
+                </span>
+              </Link>
+            ) : null}
+            {user?.role === "participant" ? (
+              <Link className={linkClass("/my-registrations")} to="/my-registrations">
+                <span className="inline-flex items-center gap-2">
+                  <TicketIcon className="h-4 w-4" />
+                  My Registrations
+                </span>
+              </Link>
+            ) : null}
+          </nav>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 backdrop-blur">
+            {user?.name} • {user?.role}
+          </span>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15"
+            onClick={handleLogout}
+          >
+            <span className="inline-flex items-center gap-2">
+              Logout
+              <ArrowRightIcon className="h-4 w-4 rotate-180" />
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default TopNav;
