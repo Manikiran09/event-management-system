@@ -28,6 +28,8 @@ const developmentOrigins = [
   "http://127.0.0.1:4173",
 ];
 
+const isVercelOrigin = (origin) => /^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(origin);
+
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
   .map(normalizeOrigin)
@@ -44,7 +46,7 @@ app.use(
 
       const normalizedOrigin = normalizeOrigin(origin);
 
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin)) {
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin) || isVercelOrigin(normalizedOrigin)) {
         callback(null, true);
         return;
       }
