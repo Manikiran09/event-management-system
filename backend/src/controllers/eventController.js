@@ -15,7 +15,7 @@ const createEvent = async (req, res) => {
       return res.status(400).json({ message: "Invalid ticket price" });
     }
 
-    const allowedMethods = ["upi", "visa", "credit", "debit"];
+    const allowedMethods = ["razorpay", "visa", "credit", "debit"];
     const normalizedMethods = Array.isArray(paymentMethods)
       ? [...new Set(paymentMethods.map((method) => String(method).toLowerCase()))].filter((method) => allowedMethods.includes(method))
       : [];
@@ -180,7 +180,7 @@ const updateEvent = async (req, res) => {
     }
 
     if (req.body.paymentMethods !== undefined) {
-      const allowedMethods = ["upi", "visa", "credit", "debit"];
+      const allowedMethods = ["razorpay", "visa", "credit", "debit"];
       const normalizedMethods = Array.isArray(req.body.paymentMethods)
         ? [...new Set(req.body.paymentMethods.map((method) => String(method).toLowerCase()))].filter((method) => allowedMethods.includes(method))
         : [];

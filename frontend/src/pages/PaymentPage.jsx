@@ -1,18 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import QRCode from "react-qr-code";
 import api from "../api";
 import TopNav from "../components/TopNav";
 
 const availablePaymentMethods = [
-  { value: "upi", label: "UPI" },
+  { value: "razorpay", label: "Razorpay" },
   { value: "visa", label: "Visa" },
   { value: "credit", label: "Credit Card" },
   { value: "debit", label: "Debit Card" },
 ];
+const razorpayThemeColor = import.meta.env.VITE_RAZORPAY_THEME_COLOR || "#0f766e";
 
-const paymentReceiverUpi = import.meta.env.VITE_PAYMENT_UPI_ID || "eventhub@upi";
-const paymentReceiverName = import.meta.env.VITE_PAYMENT_RECEIVER_NAME || "EventHub";
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const PaymentPage = () => {
   const { eventId } = useParams();
@@ -21,8 +33,7 @@ const PaymentPage = () => {
   const [event, setEvent] = useState(location.state?.event || null);
   const [loading, setLoading] = useState(!location.state?.event);
   const [error, setError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState(location.state?.event?.paymentMethods?.[0] || "upi");
-  const [upiReference, setUpiReference] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState(location.state?.event?.paymentMethods?.[0] || "razorpay");
   const [cardForm, setCardForm] = useState({ holderName: "", cardNumber: "", expiry: "", cvv: "" });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -32,7 +43,7 @@ const PaymentPage = () => {
       return event.paymentMethods;
     }
 
-    return ["upi", "visa", "credit", "debit"];
+    return ["razorpay", "visa", "credit", "debit"];
   }, [event]);
 
   const selectedMethodLabel = availablePaymentMethods.find((item) => item.value === paymentMethod)?.label || paymentMethod.toUpperCase();
@@ -52,7 +63,7 @@ const PaymentPage = () => {
       }
 
       setEvent(foundEvent);
-      setPaymentMethod(foundEvent.paymentMethods?.[0] || "upi");
+      setPaymentMethod(foundEvent.paymentMethods?.[0] || "razorpay");
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to load payment details");
     } finally {
@@ -65,11 +76,6 @@ const PaymentPage = () => {
       fetchEvent();
     }
   }, [event]);
-
-  const upiPayload = useMemo(() => {
-    const note = encodeURIComponent(`Payment for ${event?.title || "event"}`);
-    return `upi://pay?pa=${encodeURIComponent(paymentReceiverUpi)}&pn=${encodeURIComponent(paymentReceiverName)}&am=${amount.toFixed(2)}&cu=INR&tn=${note}`;
-  }, [amount, event?.title]);
 
   const registerAfterPayment = async (payload) => {
     setSubmitting(true);
@@ -90,13 +96,55 @@ const PaymentPage = () => {
   const handleSubmit = async (submitEvent) => {
     submitEvent.preventDefault();
 
-    if (paymentMethod === "upi") {
-      if (!upiReference.trim()) {
-        setError("Enter the UPI transaction reference");
-        return;
-      }
+    if (paymentMethod === "razorpay") {
+      setSubmitting(true);
+      setError("");
 
-      await registerAfterPayment({ paymentMethod, paymentReference: upiReference.trim() });
+      try {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          setError("Failed to load Razorpay checkout");
+          setSubmitting(false);
+          return;
+        }
+
+        const orderResponse = await api.post(`/registrations/${eventId}/payment-order`);
+        const { order, keyId } = orderResponse.data;
+
+        const razorpay = new window.Razorpay({
+          key: keyId,
+          amount: order.amount,
+          currency: order.currency,
+          name: "EventHub",
+          description: event?.title || "Event Registration",
+          order_id: order.id,
+          theme: { color: razorpayThemeColor },
+          handler: async (response) => {
+            try {
+              await api.post(`/registrations/${eventId}/confirm-payment`, {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+              setMessage("Payment completed and registration saved");
+              setTimeout(() => navigate("/my-registrations"), 900);
+            } catch (apiError) {
+              setError(apiError.response?.data?.message || "Payment verification failed");
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setSubmitting(false);
+            },
+          },
+        });
+
+        razorpay.open();
+      } catch (apiError) {
+        setError(apiError.response?.data?.message || "Failed to start Razorpay payment");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -164,27 +212,15 @@ const PaymentPage = () => {
               </div>
 
               <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                {paymentMethod === "upi" ? (
-                  <div className="grid gap-5 md:grid-cols-[260px_1fr] md:items-center">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Scanner</p>
-                      <QRCode value={upiPayload} size={220} className="mx-auto h-auto w-full max-w-[220px]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">Scan & Pay</p>
-                      <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-950">UPI payment</h2>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">Open any UPI app scanner and scan this code. After payment, enter the transaction reference to finish registration.</p>
-                      <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-                        <p><strong>Payee:</strong> {paymentReceiverName}</p>
-                        <p><strong>UPI ID:</strong> {paymentReceiverUpi}</p>
-                        <p><strong>Amount:</strong> ₹{amount.toLocaleString()}</p>
-                      </div>
-                      <a
-                        href={upiPayload}
-                        className="mt-4 inline-flex items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-100"
-                      >
-                        Open UPI App
-                      </a>
+                {paymentMethod === "razorpay" ? (
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">Razorpay Checkout</p>
+                    <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-950">Secure payment window</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">You will be forwarded to Razorpay checkout where participants can use UPI, card, wallet, or netbanking based on availability.</p>
+                    <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                      <p><strong>Gateway:</strong> Razorpay</p>
+                      <p><strong>Amount:</strong> ₹{amount.toLocaleString()}</p>
+                      <p><strong>Event:</strong> {event?.title}</p>
                     </div>
                   </div>
                 ) : (
@@ -225,15 +261,8 @@ const PaymentPage = () => {
                 <p><strong>Method:</strong> {selectedMethodLabel}</p>
               </div>
 
-              {paymentMethod === "upi" ? (
-                <label className="mt-5 block text-sm font-semibold text-slate-700">
-                  UPI Transaction Reference
-                  <input className="auth-input mt-2" type="text" value={upiReference} onChange={(event) => setUpiReference(event.target.value)} placeholder="Enter UPI reference" />
-                </label>
-              ) : null}
-
               <button type="button" disabled={submitting} onClick={handleSubmit} className="auth-button mt-6 inline-flex items-center justify-center">
-                {submitting ? "Processing..." : `Pay with ${selectedMethodLabel}`}
+                {submitting ? "Processing..." : paymentMethod === "razorpay" ? "Pay with Razorpay" : `Pay with ${selectedMethodLabel}`}
               </button>
             </aside>
           </div>

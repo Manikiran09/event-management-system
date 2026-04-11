@@ -38,7 +38,7 @@ const eventSchema = new mongoose.Schema(
     },
     paymentMethods: {
       type: [String],
-      enum: ["upi", "visa", "credit", "debit"],
+      enum: ["razorpay", "visa", "credit", "debit"],
       default: [],
     },
     createdBy: {

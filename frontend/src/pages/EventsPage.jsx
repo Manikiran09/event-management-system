@@ -18,7 +18,7 @@ const initialForm = {
 
 const defaultMapCenter = [20.5937, 78.9629];
 const availablePaymentMethods = [
-  { value: "upi", label: "UPI" },
+  { value: "razorpay", label: "Razorpay" },
   { value: "visa", label: "Visa" },
   { value: "credit", label: "Credit Card" },
   { value: "debit", label: "Debit Card" },

@@ -1,6 +1,16 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
+import Razorpay from "razorpay";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
+
+const razorpayInstance =
+  process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+    ? new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      })
+    : null;
 
 const registerForEvent = async (req, res) => {
   try {
@@ -42,7 +52,7 @@ const registerForEvent = async (req, res) => {
     const ticketPrice = Number(event.ticketPrice || 0);
     const availableMethods = Array.isArray(event.paymentMethods) && event.paymentMethods.length > 0
       ? event.paymentMethods
-      : ["upi", "visa", "credit", "debit"];
+      : ["razorpay", "visa", "credit", "debit"];
 
     const normalizedPaymentMethod = paymentMethod ? String(paymentMethod).toLowerCase() : null;
     if (ticketPrice > 0 && !normalizedPaymentMethod) {
@@ -73,6 +83,143 @@ const registerForEvent = async (req, res) => {
     return res.status(201).json({ message: ticketPrice > 0 ? "Payment completed and registration saved" : "Registered successfully", registration });
   } catch (error) {
     return res.status(500).json({ message: "Failed to register", error: error.message });
+  }
+};
+
+const createRazorpayPaymentOrder = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!razorpayInstance) {
+      return res.status(500).json({ message: "Razorpay is not configured" });
+    }
+
+    if (!mongoose.isValidObjectId(eventId)) {
+      return res.status(400).json({ message: "Invalid event id" });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.date <= new Date()) {
+      return res.status(400).json({ message: "Cannot register for past events" });
+    }
+
+    const existing = await Registration.findOne({
+      event: eventId,
+      participant: req.user.userId,
+      status: "registered",
+    });
+
+    if (existing) {
+      return res.status(409).json({ message: "Already registered for this event" });
+    }
+
+    const registeredCount = await Registration.countDocuments({
+      event: eventId,
+      status: "registered",
+    });
+
+    if (registeredCount >= event.capacity) {
+      return res.status(400).json({ message: "Event is full" });
+    }
+
+    const ticketPrice = Number(event.ticketPrice || 0);
+    if (ticketPrice <= 0) {
+      return res.status(400).json({ message: "This event does not require Razorpay payment" });
+    }
+
+    const availableMethods = Array.isArray(event.paymentMethods) && event.paymentMethods.length > 0
+      ? event.paymentMethods
+      : ["razorpay", "visa", "credit", "debit"];
+
+    if (!availableMethods.includes("razorpay")) {
+      return res.status(400).json({ message: "Razorpay is not enabled for this event" });
+    }
+
+    const order = await razorpayInstance.orders.create({
+      amount: Math.round(ticketPrice * 100),
+      currency: "INR",
+      receipt: `evt_${event._id.toString().slice(-6)}_${Date.now()}`,
+      notes: {
+        eventId: event._id.toString(),
+        participantId: req.user.userId,
+      },
+    });
+
+    return res.json({
+      keyId: process.env.RAZORPAY_KEY_ID,
+      order,
+      amount: ticketPrice,
+      currency: "INR",
+      event: {
+        id: event._id,
+        title: event.title,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to create Razorpay order", error: error.message });
+  }
+};
+
+const confirmRazorpayPayment = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      return res.status(500).json({ message: "Razorpay is not configured" });
+    }
+
+    if (!mongoose.isValidObjectId(eventId)) {
+      return res.status(400).json({ message: "Invalid event id" });
+    }
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ message: "Missing Razorpay payment details" });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({ message: "Invalid payment signature" });
+    }
+
+    const registeredCount = await Registration.countDocuments({
+      event: eventId,
+      status: "registered",
+    });
+
+    if (registeredCount >= event.capacity) {
+      return res.status(400).json({ message: "Event is full" });
+    }
+
+    const registration = await Registration.findOneAndUpdate(
+      { event: eventId, participant: req.user.userId },
+      {
+        status: "registered",
+        paymentStatus: "paid",
+        paymentMethod: "razorpay",
+        paymentReference: razorpay_payment_id,
+        paymentAmount: Number(event.ticketPrice || 0),
+        paidAt: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(201).json({ message: "Payment confirmed and registration saved", registration });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to confirm Razorpay payment", error: error.message });
   }
 };
 
@@ -122,4 +269,4 @@ const myRegistrations = async (req, res) => {
   }
 };
 
-export { registerForEvent, cancelRegistration, myRegistrations };
+export { registerForEvent, createRazorpayPaymentOrder, confirmRazorpayPayment, cancelRegistration, myRegistrations };

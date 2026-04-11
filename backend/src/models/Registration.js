@@ -26,7 +26,7 @@ const registrationSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["upi", "visa", "credit", "debit"],
+      enum: ["razorpay", "visa", "credit", "debit"],
       default: null,
     },
     paymentReference: {
