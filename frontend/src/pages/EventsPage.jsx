@@ -165,7 +165,7 @@ const EventsPage = () => {
               <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="datetime-local" name="date" value={form.date} onChange={handleChange} required />
               <div className="md:col-span-2">
                 <p className="mb-2 text-sm font-semibold text-slate-700">Location</p>
-                <p className="mb-3 text-xs text-slate-500">Click on the map to choose the event location.</p>
+                <p className="mb-3 text-xs text-slate-500">Click on the map to set the event location.</p>
                 <div className="overflow-hidden rounded-2xl border border-slate-200">
                   <MapContainer center={selectedPosition || defaultMapCenter} zoom={selectedPosition ? 14 : 5} style={{ height: "260px", width: "100%" }}>
                     <TileLayer
