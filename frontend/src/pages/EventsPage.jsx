@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
@@ -42,6 +43,7 @@ const LocationPicker = ({ selectedPosition, onPick }) => {
 
 const EventsPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -49,8 +51,6 @@ const EventsPage = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [selectedPosition, setSelectedPosition] = useState(null);
-  const [paymentEvent, setPaymentEvent] = useState(null);
-  const [paymentForm, setPaymentForm] = useState({ paymentMethod: "upi", paymentReference: "" });
 
   const isManager = user?.role === "admin" || user?.role === "organizer";
 
@@ -140,24 +140,11 @@ const EventsPage = () => {
     }
 
     if (Number(eventItem.ticketPrice || 0) > 0) {
-      setPaymentEvent(eventItem);
-      setPaymentForm({ paymentMethod: eventItem.paymentMethods?.[0] || "upi", paymentReference: "" });
+      navigate(`/payment/${eventItem._id}`, { state: { event: eventItem } });
       return;
     }
 
     registerEvent(eventItem._id);
-  };
-
-  const handlePaymentSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!paymentEvent) {
-      return;
-    }
-
-    await registerEvent(paymentEvent._id, paymentForm);
-    setPaymentEvent(null);
-    setPaymentForm({ paymentMethod: "upi", paymentReference: "" });
   };
 
   const handleDelete = async (eventId) => {
@@ -313,66 +300,6 @@ const EventsPage = () => {
           })}
         </section>
 
-        {paymentEvent ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
-            <div className="w-full max-w-xl rounded-3xl border border-white/70 bg-white p-6 shadow-2xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">Payment</p>
-                  <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-950">{paymentEvent.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600">Complete the payment to finish your registration.</p>
-                </div>
-                <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-600" onClick={() => setPaymentEvent(null)}>
-                  Close
-                </button>
-              </div>
-
-              <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                <p><strong>Amount:</strong> ₹{Number(paymentEvent.ticketPrice || 0).toLocaleString()}</p>
-                <p className="mt-1"><strong>Accepted:</strong> {(paymentEvent.paymentMethods || []).map((method) => availablePaymentMethods.find((item) => item.value === method)?.label || method.toUpperCase()).join(", ") || "UPI, Visa, Credit, Debit"}</p>
-              </div>
-
-              <form className="mt-5 space-y-4" onSubmit={handlePaymentSubmit}>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Payment Method
-                  <select
-                    className="auth-input mt-2"
-                    value={paymentForm.paymentMethod}
-                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentMethod: event.target.value }))}
-                    required
-                  >
-                    {(paymentEvent.paymentMethods?.length ? paymentEvent.paymentMethods : availablePaymentMethods.map((item) => item.value)).map((method) => (
-                      <option key={method} value={method}>
-                        {availablePaymentMethods.find((item) => item.value === method)?.label || method.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block text-sm font-semibold text-slate-700">
-                  UPI ID / Card reference / Transaction ID
-                  <input
-                    className="auth-input mt-2"
-                    type="text"
-                    value={paymentForm.paymentReference}
-                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentReference: event.target.value }))}
-                    placeholder="Enter payment reference"
-                    required
-                  />
-                </label>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <button type="button" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700" onClick={() => setPaymentEvent(null)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="auth-button inline-flex items-center justify-center sm:w-auto">
-                    Pay & Register
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        ) : null}
       </section>
     </main>
   );

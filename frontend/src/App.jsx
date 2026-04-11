@@ -5,6 +5,7 @@ import DashboardPage from "./pages/DashboardPage";
 import EventsPage from "./pages/EventsPage";
 import LoginPage from "./pages/LoginPage";
 import MyRegistrationsPage from "./pages/MyRegistrationsPage";
+import PaymentPage from "./pages/PaymentPage";
 import RegisterPage from "./pages/RegisterPage";
 import { useAuth } from "./context/AuthContext";
 
@@ -36,6 +37,14 @@ const App = () => {
         element={
           <ProtectedRoute roles={["participant"]}>
             <MyRegistrationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payment/:eventId"
+        element={
+          <ProtectedRoute roles={["participant"]}>
+            <PaymentPage />
           </ProtectedRoute>
         }
       />
