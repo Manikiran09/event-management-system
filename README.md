@@ -43,6 +43,40 @@ npm run dev
 
 Frontend runs at `http://localhost:5173`.
 
+## Run On Linux/macOS (Terminal)
+
+Use these commands from a terminal:
+
+```bash
+cd /path/to/event-management-system
+npm install
+npm run install:all
+npm run dev
+```
+
+This starts backend and frontend together in one terminal.
+
+If you prefer separate terminals:
+
+```bash
+# terminal 1
+cd backend
+npm install
+npm run dev
+
+# terminal 2
+cd frontend
+npm install
+npm run dev
+```
+
+Optional (for local API proxy in frontend dev):
+
+```bash
+cd frontend
+echo "VITE_DEV_API_PROXY=http://localhost:5112" > .env
+```
+
 ## Deployment
 
 ### Backend on Render
