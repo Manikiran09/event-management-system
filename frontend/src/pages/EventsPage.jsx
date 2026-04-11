@@ -11,9 +11,17 @@ const initialForm = {
   date: "",
   location: "",
   capacity: 50,
+  ticketPrice: 0,
+  paymentMethods: [],
 };
 
 const defaultMapCenter = [20.5937, 78.9629];
+const availablePaymentMethods = [
+  { value: "upi", label: "UPI" },
+  { value: "visa", label: "Visa" },
+  { value: "credit", label: "Credit Card" },
+  { value: "debit", label: "Debit Card" },
+];
 
 const LocationPicker = ({ selectedPosition, onPick }) => {
   useMapEvents({
@@ -41,6 +49,8 @@ const EventsPage = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [selectedPosition, setSelectedPosition] = useState(null);
+  const [paymentEvent, setPaymentEvent] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({ paymentMethod: "upi", paymentReference: "" });
 
   const isManager = user?.role === "admin" || user?.role === "organizer";
 
@@ -75,6 +85,16 @@ const EventsPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePaymentMethodToggle = (method) => {
+    setForm((prev) => {
+      const nextMethods = prev.paymentMethods.includes(method)
+        ? prev.paymentMethods.filter((item) => item !== method)
+        : [...prev.paymentMethods, method];
+
+      return { ...prev, paymentMethods: nextMethods };
+    });
+  };
+
   const handleCreate = async (event) => {
     event.preventDefault();
     setMessage("");
@@ -84,6 +104,7 @@ const EventsPage = () => {
       await api.post("/events", {
         ...form,
         capacity: Number(form.capacity),
+        ticketPrice: Number(form.ticketPrice),
       });
       setMessage("Event created");
       setForm(initialForm);
@@ -100,17 +121,43 @@ const EventsPage = () => {
     setForm((prev) => ({ ...prev, location: `${lat.toFixed(6)}, ${lng.toFixed(6)}` }));
   };
 
-  const handleRegister = async (eventId) => {
+  const registerEvent = async (eventId, paymentDetails = {}) => {
     setMessage("");
     setError("");
 
     try {
-      await api.post(`/registrations/${eventId}`);
-      setMessage("Registered successfully");
+      await api.post(`/registrations/${eventId}`, paymentDetails);
+      setMessage(paymentDetails.paymentMethod ? "Payment completed and registration saved" : "Registered successfully");
       await loadData();
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to register");
     }
+  };
+
+  const handleRegister = (eventItem) => {
+    if (user?.role !== "participant") {
+      return;
+    }
+
+    if (Number(eventItem.ticketPrice || 0) > 0) {
+      setPaymentEvent(eventItem);
+      setPaymentForm({ paymentMethod: eventItem.paymentMethods?.[0] || "upi", paymentReference: "" });
+      return;
+    }
+
+    registerEvent(eventItem._id);
+  };
+
+  const handlePaymentSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!paymentEvent) {
+      return;
+    }
+
+    await registerEvent(paymentEvent._id, paymentForm);
+    setPaymentEvent(null);
+    setPaymentForm({ paymentMethod: "upi", paymentReference: "" });
   };
 
   const handleDelete = async (eventId) => {
@@ -163,6 +210,7 @@ const EventsPage = () => {
                 required
               />
               <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="datetime-local" name="date" value={form.date} onChange={handleChange} required />
+              <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="number" name="ticketPrice" min="0" step="1" value={form.ticketPrice} onChange={handleChange} placeholder="Ticket Price" />
               <div className="md:col-span-2">
                 <p className="mb-2 text-sm font-semibold text-slate-700">Location</p>
                 <p className="mb-3 text-xs text-slate-500">Click on the map to set the event location.</p>
@@ -176,6 +224,25 @@ const EventsPage = () => {
                   </MapContainer>
                 </div>
                 <input className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm" name="location" placeholder="Map coordinates will appear here" value={form.location} readOnly required />
+              </div>
+              <div className="md:col-span-2">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-700">Accepted Payment Methods</p>
+                  <span className="text-xs text-slate-500">For paid events only</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {availablePaymentMethods.map((method) => (
+                    <label key={method.value} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm transition hover:border-teal-500">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        checked={form.paymentMethods.includes(method.value)}
+                        onChange={() => handlePaymentMethodToggle(method.value)}
+                      />
+                      <span>{method.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <input
                 className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15"
@@ -219,12 +286,16 @@ const EventsPage = () => {
                     <p><strong>Date:</strong> {new Date(event.date).toLocaleString()}</p>
                     <p><strong>Seats:</strong> {event.registeredCount} / {event.capacity}</p>
                     <p><strong>Organizer:</strong> {event.createdBy?.name || "Unknown"}</p>
+                    <p><strong>Ticket:</strong> {Number(event.ticketPrice || 0) > 0 ? `₹${Number(event.ticketPrice).toLocaleString()}` : "Free"}</p>
+                    {Number(event.ticketPrice || 0) > 0 ? (
+                      <p><strong>Payments:</strong> {(event.paymentMethods || []).map((method) => availablePaymentMethods.find((item) => item.value === method)?.label || method.toUpperCase()).join(", ") || "Any supported method"}</p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   {canRegister ? (
-                    <button className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" type="button" onClick={() => handleRegister(event._id)}>
-                      Register
+                    <button className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" type="button" onClick={() => handleRegister(event)}>
+                      {Number(event.ticketPrice || 0) > 0 ? "Pay & Register" : "Register"}
                     </button>
                   ) : null}
                   {user?.role === "participant" && isRegistered ? <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">Registered</span> : null}
@@ -241,6 +312,67 @@ const EventsPage = () => {
             );
           })}
         </section>
+
+        {paymentEvent ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+            <div className="w-full max-w-xl rounded-3xl border border-white/70 bg-white p-6 shadow-2xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">Payment</p>
+                  <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-950">{paymentEvent.title}</h3>
+                  <p className="mt-2 text-sm text-slate-600">Complete the payment to finish your registration.</p>
+                </div>
+                <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-600" onClick={() => setPaymentEvent(null)}>
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                <p><strong>Amount:</strong> ₹{Number(paymentEvent.ticketPrice || 0).toLocaleString()}</p>
+                <p className="mt-1"><strong>Accepted:</strong> {(paymentEvent.paymentMethods || []).map((method) => availablePaymentMethods.find((item) => item.value === method)?.label || method.toUpperCase()).join(", ") || "UPI, Visa, Credit, Debit"}</p>
+              </div>
+
+              <form className="mt-5 space-y-4" onSubmit={handlePaymentSubmit}>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Payment Method
+                  <select
+                    className="auth-input mt-2"
+                    value={paymentForm.paymentMethod}
+                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentMethod: event.target.value }))}
+                    required
+                  >
+                    {(paymentEvent.paymentMethods?.length ? paymentEvent.paymentMethods : availablePaymentMethods.map((item) => item.value)).map((method) => (
+                      <option key={method} value={method}>
+                        {availablePaymentMethods.find((item) => item.value === method)?.label || method.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block text-sm font-semibold text-slate-700">
+                  UPI ID / Card reference / Transaction ID
+                  <input
+                    className="auth-input mt-2"
+                    type="text"
+                    value={paymentForm.paymentReference}
+                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentReference: event.target.value }))}
+                    placeholder="Enter payment reference"
+                    required
+                  />
+                </label>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <button type="button" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700" onClick={() => setPaymentEvent(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="auth-button inline-flex items-center justify-center sm:w-auto">
+                    Pay & Register
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

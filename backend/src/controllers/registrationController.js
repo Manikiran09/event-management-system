@@ -5,6 +5,7 @@ import Registration from "../models/Registration.js";
 const registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { paymentMethod, paymentReference = "" } = req.body;
 
     if (!mongoose.isValidObjectId(eventId)) {
       return res.status(400).json({ message: "Invalid event id" });
@@ -38,13 +39,38 @@ const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "Event is full" });
     }
 
-    await Registration.findOneAndUpdate(
+    const ticketPrice = Number(event.ticketPrice || 0);
+    const availableMethods = Array.isArray(event.paymentMethods) && event.paymentMethods.length > 0
+      ? event.paymentMethods
+      : ["upi", "visa", "credit", "debit"];
+
+    const normalizedPaymentMethod = paymentMethod ? String(paymentMethod).toLowerCase() : null;
+    if (ticketPrice > 0 && !normalizedPaymentMethod) {
+      return res.status(400).json({ message: "Payment method is required for paid events" });
+    }
+
+    if (normalizedPaymentMethod && !availableMethods.includes(normalizedPaymentMethod)) {
+      return res.status(400).json({ message: "Selected payment method is not available for this event" });
+    }
+
+    if (ticketPrice > 0 && paymentReference.trim() === "") {
+      return res.status(400).json({ message: "Payment reference is required for paid events" });
+    }
+
+    const registration = await Registration.findOneAndUpdate(
       { event: eventId, participant: req.user.userId },
-      { status: "registered" },
+      {
+        status: "registered",
+        paymentStatus: ticketPrice > 0 ? "paid" : "not_required",
+        paymentMethod: ticketPrice > 0 ? normalizedPaymentMethod : null,
+        paymentReference: ticketPrice > 0 ? paymentReference.trim() : "",
+        paymentAmount: ticketPrice,
+        paidAt: ticketPrice > 0 ? new Date() : null,
+      },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    return res.status(201).json({ message: "Registered successfully" });
+    return res.status(201).json({ message: ticketPrice > 0 ? "Payment completed and registration saved" : "Registered successfully", registration });
   } catch (error) {
     return res.status(500).json({ message: "Failed to register", error: error.message });
   }

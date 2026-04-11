@@ -4,11 +4,21 @@ import Registration from "../models/Registration.js";
 
 const createEvent = async (req, res) => {
   try {
-    const { title, description, date, location, capacity } = req.body;
+    const { title, description, date, location, capacity, ticketPrice = 0, paymentMethods = [] } = req.body;
 
     if (!title || !description || !date || !location || !capacity) {
       return res.status(400).json({ message: "All fields are required" });
     }
+
+    const normalizedPrice = Number(ticketPrice);
+    if (Number.isNaN(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ message: "Invalid ticket price" });
+    }
+
+    const allowedMethods = ["upi", "visa", "credit", "debit"];
+    const normalizedMethods = Array.isArray(paymentMethods)
+      ? [...new Set(paymentMethods.map((method) => String(method).toLowerCase()))].filter((method) => allowedMethods.includes(method))
+      : [];
 
     const eventDate = new Date(date);
     if (Number.isNaN(eventDate.getTime())) {
@@ -25,6 +35,8 @@ const createEvent = async (req, res) => {
       date: eventDate,
       location,
       capacity,
+      ticketPrice: normalizedPrice,
+      paymentMethods: normalizedMethods.length > 0 ? normalizedMethods : normalizedPrice > 0 ? allowedMethods : [],
       createdBy: req.user.userId,
     });
 
@@ -119,12 +131,28 @@ const updateEvent = async (req, res) => {
       }
     }
 
-    const fields = ["title", "description", "date", "location", "capacity"];
+    const fields = ["title", "description", "date", "location", "capacity", "ticketPrice", "paymentMethods"];
     fields.forEach((field) => {
       if (req.body[field] !== undefined) {
         event[field] = req.body[field];
       }
     });
+
+    if (req.body.ticketPrice !== undefined) {
+      const normalizedPrice = Number(req.body.ticketPrice);
+      if (Number.isNaN(normalizedPrice) || normalizedPrice < 0) {
+        return res.status(400).json({ message: "Invalid ticket price" });
+      }
+      event.ticketPrice = normalizedPrice;
+    }
+
+    if (req.body.paymentMethods !== undefined) {
+      const allowedMethods = ["upi", "visa", "credit", "debit"];
+      const normalizedMethods = Array.isArray(req.body.paymentMethods)
+        ? [...new Set(req.body.paymentMethods.map((method) => String(method).toLowerCase()))].filter((method) => allowedMethods.includes(method))
+        : [];
+      event.paymentMethods = normalizedMethods.length > 0 ? normalizedMethods : event.ticketPrice > 0 ? allowedMethods : [];
+    }
 
     await event.save();
 

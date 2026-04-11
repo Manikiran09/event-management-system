@@ -19,6 +19,30 @@ const registrationSchema = new mongoose.Schema(
       enum: ["registered", "cancelled"],
       default: "registered",
     },
+    paymentStatus: {
+      type: String,
+      enum: ["not_required", "pending", "paid", "failed", "refunded"],
+      default: "not_required",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["upi", "visa", "credit", "debit"],
+      default: null,
+    },
+    paymentReference: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    paymentAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

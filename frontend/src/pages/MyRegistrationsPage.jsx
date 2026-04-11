@@ -62,6 +62,12 @@ const MyRegistrationsPage = () => {
                   <p>
                     <strong>Date:</strong> {item.event?.date ? new Date(item.event.date).toLocaleString() : "N/A"}
                   </p>
+                  <p>
+                    <strong>Ticket:</strong> {Number(item.paymentAmount || item.event?.ticketPrice || 0) > 0 ? `₹${Number(item.paymentAmount || item.event?.ticketPrice).toLocaleString()}` : "Free"}
+                  </p>
+                  <p>
+                    <strong>Payment:</strong> {item.paymentStatus === "paid" ? `Paid via ${item.paymentMethod?.toUpperCase() || "payment"}` : item.paymentStatus === "not_required" ? "Not required" : item.paymentStatus || "Pending"}
+                  </p>
                 </div>
               </div>
               <button type="button" className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-rose-600 to-rose-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/10 transition hover:-translate-y-0.5" onClick={() => cancelRegistration(item.event?._id)}>

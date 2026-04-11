@@ -30,6 +30,17 @@ const eventSchema = new mongoose.Schema(
       min: 1,
       max: 100000,
     },
+    ticketPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    paymentMethods: {
+      type: [String],
+      enum: ["upi", "visa", "credit", "debit"],
+      default: [],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
