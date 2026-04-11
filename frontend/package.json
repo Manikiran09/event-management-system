@@ -3,10 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host --strictPort",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host --strictPort"
   },
   "dependencies": {
     "axios": "^1.7.4",
