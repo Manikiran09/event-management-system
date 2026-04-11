@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import api from "../api";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
@@ -11,6 +13,25 @@ const initialForm = {
   capacity: 50,
 };
 
+const defaultMapCenter = [20.5937, 78.9629];
+
+const LocationPicker = ({ selectedPosition, onPick }) => {
+  useMapEvents({
+    click: (event) => {
+      const { lat, lng } = event.latlng;
+      onPick([lat, lng]);
+    },
+  });
+
+  if (!selectedPosition) {
+    return null;
+  }
+
+  return (
+    <CircleMarker center={selectedPosition} radius={8} pathOptions={{ color: "#0f766e", fillColor: "#14b8a6", fillOpacity: 0.8 }} />
+  );
+};
+
 const EventsPage = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
@@ -19,6 +40,7 @@ const EventsPage = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [selectedPosition, setSelectedPosition] = useState(null);
 
   const isManager = user?.role === "admin" || user?.role === "organizer";
 
@@ -65,10 +87,17 @@ const EventsPage = () => {
       });
       setMessage("Event created");
       setForm(initialForm);
+      setSelectedPosition(null);
       await loadData();
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to create event");
     }
+  };
+
+  const handleLocationPick = (position) => {
+    setSelectedPosition(position);
+    const [lat, lng] = position;
+    setForm((prev) => ({ ...prev, location: `${lat.toFixed(6)}, ${lng.toFixed(6)}` }));
   };
 
   const handleRegister = async (eventId) => {
@@ -134,7 +163,20 @@ const EventsPage = () => {
                 required
               />
               <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="datetime-local" name="date" value={form.date} onChange={handleChange} required />
-              <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" name="location" placeholder="Location" value={form.location} onChange={handleChange} required />
+              <div className="md:col-span-2">
+                <p className="mb-2 text-sm font-semibold text-slate-700">Location</p>
+                <p className="mb-3 text-xs text-slate-500">Click on the map to choose the event location.</p>
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <MapContainer center={selectedPosition || defaultMapCenter} zoom={selectedPosition ? 14 : 5} style={{ height: "260px", width: "100%" }}>
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <LocationPicker selectedPosition={selectedPosition} onPick={handleLocationPick} />
+                  </MapContainer>
+                </div>
+                <input className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm" name="location" placeholder="Map coordinates will appear here" value={form.location} readOnly required />
+              </div>
               <input
                 className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15"
                 type="number"
