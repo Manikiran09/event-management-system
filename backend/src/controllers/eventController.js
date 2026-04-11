@@ -88,6 +88,39 @@ const listEvents = async (req, res) => {
   }
 };
 
+const getEventById = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!mongoose.isValidObjectId(eventId)) {
+      return res.status(400).json({ message: "Invalid event id" });
+    }
+
+    const event = await Event.findById(eventId)
+      .populate("createdBy", "name email role")
+      .lean();
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    const registeredCount = await Registration.countDocuments({
+      event: event._id,
+      status: "registered",
+    });
+
+    return res.json({
+      event: {
+        ...event,
+        registeredCount,
+        availableSeats: Math.max(event.capacity - registeredCount, 0),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch event", error: error.message });
+  }
+};
+
 const updateEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -191,4 +224,4 @@ const deleteEvent = async (req, res) => {
   }
 };
 
-export { createEvent, listEvents, updateEvent, deleteEvent };
+export { createEvent, getEventById, listEvents, updateEvent, deleteEvent };

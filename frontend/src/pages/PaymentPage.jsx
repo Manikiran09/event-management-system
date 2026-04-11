@@ -43,8 +43,8 @@ const PaymentPage = () => {
     setError("");
 
     try {
-      const response = await api.get("/events");
-      const foundEvent = (response.data.events || []).find((item) => item._id === eventId);
+      const response = await api.get(`/events/public/${eventId}`);
+      const foundEvent = response.data.event;
 
       if (!foundEvent) {
         setError("Event not found");
