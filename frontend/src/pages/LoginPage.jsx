@@ -6,6 +6,7 @@ import { setRuntimeApiBaseUrl } from "../api";
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [showApiUrlAction, setShowApiUrlAction] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const LoginPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setShowApiUrlAction(false);
     setSubmitting(true);
 
     try {
@@ -28,6 +30,7 @@ const LoginPage = () => {
       const responseData = apiError.response?.data;
       const responseMessage = responseData?.message || responseData?.error || responseData?.detail;
       const responseText = typeof responseData === "string" ? responseData : "";
+      const shouldShowApiAction = !apiError.response || [404, 405].includes(statusCode || 0) || (statusCode && statusCode >= 500);
 
       let fallbackMessage = "Login failed. Please verify your credentials and account status.";
 
@@ -42,7 +45,8 @@ const LoginPage = () => {
       }
 
       const resolvedMessage = responseMessage || responseText || fallbackMessage;
-      setError(statusCode ? `${resolvedMessage} (HTTP ${statusCode})` : resolvedMessage);
+      setError(resolvedMessage);
+      setShowApiUrlAction(shouldShowApiAction);
     } finally {
       setSubmitting(false);
     }
@@ -62,10 +66,12 @@ const LoginPage = () => {
 
     if (!normalizedUrl) {
       setError("Invalid API URL. Please provide a valid URL.");
+      setShowApiUrlAction(true);
       return;
     }
 
     setError(`API URL updated to ${normalizedUrl}. Try signing in again.`);
+    setShowApiUrlAction(false);
   };
 
   return (
@@ -112,13 +118,15 @@ const LoginPage = () => {
             {error ? (
               <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-700">{error}</p>
-                <button
-                  className="text-sm font-semibold text-teal-700 underline decoration-teal-400 underline-offset-2"
-                  type="button"
-                  onClick={handleConfigureApiUrl}
-                >
-                  Set API URL
-                </button>
+                {showApiUrlAction ? (
+                  <button
+                    className="text-sm font-semibold text-teal-700 underline decoration-teal-400 underline-offset-2"
+                    type="button"
+                    onClick={handleConfigureApiUrl}
+                  >
+                    Set API URL
+                  </button>
+                ) : null}
               </div>
             ) : null}
             <button className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15 disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={submitting}>
