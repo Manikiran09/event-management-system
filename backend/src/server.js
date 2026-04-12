@@ -48,6 +48,14 @@ const normalizeOrigin = (origin) => {
   }
 };
 
+const wildcardToRegex = (pattern) => {
+  const escaped = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*");
+
+  return new RegExp(`^${escaped}$`, "i");
+};
+
 const developmentOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -55,11 +63,40 @@ const developmentOrigins = [
   "http://127.0.0.1:4173",
 ];
 
-const allowedOrigins = (process.env.FRONTEND_URL || "")
+const frontendOriginRules = (process.env.FRONTEND_URL || "")
   .split(",")
-  .map(normalizeOrigin)
-  .filter(Boolean)
-  .concat(process.env.NODE_ENV === "production" ? [] : developmentOrigins);
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const exactAllowedOrigins = frontendOriginRules
+  .filter((origin) => !origin.includes("*"))
+  .map(normalizeOrigin);
+
+const wildcardAllowedOriginPatterns = frontendOriginRules
+  .filter((origin) => origin.includes("*"))
+  .map((origin) => wildcardToRegex(normalizeOrigin(origin)));
+
+wildcardAllowedOriginPatterns.push(/^https:\/\/.*\.vercel\.app$/i);
+
+if (process.env.VERCEL_URL) {
+  exactAllowedOrigins.push(normalizeOrigin(`https://${process.env.VERCEL_URL}`));
+}
+
+if (process.env.NODE_ENV !== "production") {
+  exactAllowedOrigins.push(...developmentOrigins.map(normalizeOrigin));
+}
+
+const isOriginAllowed = (origin) => {
+  if (exactAllowedOrigins.length === 0 && wildcardAllowedOriginPatterns.length === 0) {
+    return true;
+  }
+
+  if (exactAllowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  return wildcardAllowedOriginPatterns.some((pattern) => pattern.test(origin));
+};
 
 app.use(
   cors({
@@ -71,13 +108,16 @@ app.use(
 
       const normalizedOrigin = normalizeOrigin(origin);
 
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin)) {
+      if (isOriginAllowed(normalizedOrigin)) {
         callback(null, true);
         return;
       }
 
       callback(new Error("Not allowed by CORS"));
     },
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204,
   })
 );
 app.use(express.json());
