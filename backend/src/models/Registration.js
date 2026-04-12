@@ -19,6 +19,31 @@ const registrationSchema = new mongoose.Schema(
       enum: ["registered", "cancelled"],
       default: "registered",
     },
+    payment: {
+      method: {
+        type: String,
+        enum: ["debit", "credit", "visa"],
+      },
+      cardHolderName: {
+        type: String,
+        trim: true,
+      },
+      cardLast4: {
+        type: String,
+        minlength: 4,
+        maxlength: 4,
+      },
+      amount: {
+        type: Number,
+        min: 0,
+      },
+      currency: {
+        type: String,
+      },
+      paidAt: {
+        type: Date,
+      },
+    },
   },
   { timestamps: true }
 );

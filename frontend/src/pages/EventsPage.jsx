@@ -80,18 +80,35 @@ const initialForm = {
   capacity: 50,
 };
 
+const createInitialPaymentForm = (method = "debit") => ({
+  method,
+  cardHolderName: "",
+  cardNumber: "",
+  expiryMonth: "",
+  expiryYear: "",
+  cvv: "",
+});
+
 const EventsPage = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingEventId, setEditingEventId] = useState(null);
+  const [checkoutEvent, setCheckoutEvent] = useState(null);
+  const [paymentForm, setPaymentForm] = useState(createInitialPaymentForm());
+  const [paying, setPaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const eventFormRef = useRef(null);
 
   const isManager = user?.role === "admin" || user?.role === "organizer";
+  const checkoutAcceptedMethods = checkoutEvent
+    ? (checkoutEvent.paymentMethods || [])
+      .map((method) => String(method || "").toLowerCase())
+      .filter((method) => ["debit", "credit", "visa"].includes(method))
+    : [];
 
   const loadData = async () => {
     setLoading(true);
@@ -224,6 +241,62 @@ const EventsPage = () => {
       await loadData();
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to register");
+    }
+  };
+
+  const openCheckout = (event) => {
+    const acceptedMethods = (event.paymentMethods || [])
+      .map((method) => String(method || "").toLowerCase())
+      .filter((method) => ["debit", "credit", "visa"].includes(method));
+
+    const selectedMethod = acceptedMethods[0] || "debit";
+
+    setCheckoutEvent(event);
+    setPaymentForm(createInitialPaymentForm(selectedMethod));
+    setMessage("");
+    setError("");
+  };
+
+  const closeCheckout = () => {
+    setCheckoutEvent(null);
+    setPaymentForm(createInitialPaymentForm());
+    setPaying(false);
+  };
+
+  const handlePaymentChange = (event) => {
+    const { name, value } = event.target;
+    setPaymentForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePayAndRegister = async (event) => {
+    event.preventDefault();
+    if (!checkoutEvent) {
+      return;
+    }
+
+    setPaying(true);
+    setMessage("");
+    setError("");
+
+    try {
+      await api.post(`/registrations/${checkoutEvent._id}`, {
+        payment: {
+          method: paymentForm.method,
+          cardHolderName: paymentForm.cardHolderName,
+          cardNumber: paymentForm.cardNumber,
+          expiryMonth: Number(paymentForm.expiryMonth),
+          expiryYear: Number(paymentForm.expiryYear),
+          cvv: paymentForm.cvv,
+        },
+      });
+
+      setMessage("Payment successful. Registered successfully");
+      closeCheckout();
+      await loadData();
+    } catch (apiError) {
+      setError(apiError.response?.data?.message || "Payment failed");
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -420,8 +493,8 @@ const EventsPage = () => {
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   {canRegister ? (
-                    <button className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" type="button" onClick={() => handleRegister(event._id)}>
-                      Register
+                    <button className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" type="button" onClick={() => openCheckout(event)}>
+                      Pay & Register
                     </button>
                   ) : null}
                   {user?.role === "participant" && isRegistered ? <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">Registered</span> : null}
@@ -443,6 +516,103 @@ const EventsPage = () => {
             );
           })}
         </section>
+
+        {checkoutEvent ? (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-4">
+            <div className="w-full max-w-xl rounded-3xl border border-white/60 bg-white p-6 shadow-2xl">
+              <div className="mb-4">
+                <h3 className="font-display text-2xl font-bold tracking-tight text-slate-950">Pay & Register</h3>
+                <p className="mt-1 text-sm text-slate-600">{checkoutEvent.title}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">
+                  Amount: {currencySymbols[checkoutEvent.ticketPrice?.currency] || checkoutEvent.ticketPrice?.currency} {checkoutEvent.ticketPrice?.amount}
+                </p>
+              </div>
+
+              <form className="grid gap-3" onSubmit={handlePayAndRegister}>
+                <select
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                  name="method"
+                  value={paymentForm.method}
+                  onChange={handlePaymentChange}
+                  required
+                >
+                  {checkoutAcceptedMethods.length > 0 ? checkoutAcceptedMethods.map((method) => (
+                    <option key={method} value={method}>{method.toUpperCase()}</option>
+                  )) : <option value="debit">DEBIT</option>}
+                </select>
+
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                  name="cardHolderName"
+                  placeholder="Card holder name"
+                  value={paymentForm.cardHolderName}
+                  onChange={handlePaymentChange}
+                  required
+                />
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                  name="cardNumber"
+                  placeholder="Card number (16 digits)"
+                  value={paymentForm.cardNumber}
+                  onChange={handlePaymentChange}
+                  maxLength={19}
+                  required
+                />
+
+                <div className="grid grid-cols-3 gap-3">
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    type="number"
+                    name="expiryMonth"
+                    placeholder="MM"
+                    min="1"
+                    max="12"
+                    value={paymentForm.expiryMonth}
+                    onChange={handlePaymentChange}
+                    required
+                  />
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    type="number"
+                    name="expiryYear"
+                    placeholder="YYYY"
+                    min={new Date().getFullYear()}
+                    value={paymentForm.expiryYear}
+                    onChange={handlePaymentChange}
+                    required
+                  />
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    type="password"
+                    name="cvv"
+                    placeholder="CVV"
+                    maxLength={4}
+                    value={paymentForm.cvv}
+                    onChange={handlePaymentChange}
+                    required
+                  />
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-3">
+                  <button
+                    className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15 disabled:opacity-60"
+                    type="submit"
+                    disabled={paying}
+                  >
+                    {paying ? "Processing Payment..." : "Pay & Register"}
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700"
+                    type="button"
+                    onClick={closeCheckout}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );
