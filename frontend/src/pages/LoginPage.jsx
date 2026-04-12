@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { setRuntimeApiBaseUrl } from "../api";
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -33,6 +34,26 @@ const LoginPage = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleConfigureApiUrl = () => {
+    const providedUrl = window.prompt(
+      "Enter your backend base URL (example: https://your-service.up.railway.app or .../api)",
+      ""
+    );
+
+    if (providedUrl === null) {
+      return;
+    }
+
+    const normalizedUrl = setRuntimeApiBaseUrl(providedUrl);
+
+    if (!normalizedUrl) {
+      setError("Invalid API URL. Please provide a valid URL.");
+      return;
+    }
+
+    setError(`API URL updated to ${normalizedUrl}. Try signing in again.`);
   };
 
   return (
@@ -76,7 +97,18 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
             <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} required />
-            {error ? <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+            {error ? (
+              <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-700">{error}</p>
+                <button
+                  className="text-sm font-semibold text-teal-700 underline decoration-teal-400 underline-offset-2"
+                  type="button"
+                  onClick={handleConfigureApiUrl}
+                >
+                  Set API URL
+                </button>
+              </div>
+            ) : null}
             <button className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15 disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={submitting}>
               {submitting ? "Signing In..." : "Sign In"}
             </button>

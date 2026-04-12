@@ -72,6 +72,8 @@ Notes:
 
 `frontend/vercel.json` is included to ensure SPA routing works with direct/deep links.
 
+If frontend cannot reach backend after deploy, use the **Set API URL** action on the login screen and provide your Railway URL (with or without `/api`). The app stores it in browser localStorage as a runtime override.
+
 ## Main API Endpoints
 - `POST /api/auth/register`
 - `POST /api/auth/login`
