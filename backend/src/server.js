@@ -12,6 +12,32 @@ dotenv.config();
 
 const app = express();
 
+const getHealthPayload = () => {
+  const connectionStateMap = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
+
+  const dbState = connectionStateMap[mongoose.connection.readyState] || "unknown";
+  const status = dbState === "connected" ? "ok" : "degraded";
+
+  return {
+    status,
+    message: "Event management API is running",
+    database: dbState,
+  };
+};
+
+app.get("/", (req, res) => {
+  res.status(200).json(getHealthPayload());
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json(getHealthPayload());
+});
+
 const normalizeOrigin = (origin) => {
   const value = origin.trim();
 
@@ -57,17 +83,7 @@ app.use(
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
-  const connectionStateMap = {
-    0: "disconnected",
-    1: "connected",
-    2: "connecting",
-    3: "disconnecting",
-  };
-
-  const dbState = connectionStateMap[mongoose.connection.readyState] || "unknown";
-  const status = dbState === "connected" ? "ok" : "degraded";
-
-  res.json({ status, message: "Event management API is running", database: dbState });
+  res.status(200).json(getHealthPayload());
 });
 
 app.use("/api/auth", authRoutes);
