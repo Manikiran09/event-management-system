@@ -51,6 +51,7 @@ Frontend runs at `http://localhost:5173`.
 3. Deploy using `railway.toml` (already included at project root).
 4. Add these Railway environment variables:
 	- `MONGO_URI=your-mongodb-connection-string`
+	- `MONGO_DB_NAME=event_management`
 	- `JWT_SECRET=your-strong-secret`
 	- `JWT_EXPIRES_IN=1d`
 	- `ADMIN_REGISTRATION_KEY=your-admin-registration-key`
