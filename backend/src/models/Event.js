@@ -56,7 +56,7 @@ const eventSchema = new mongoose.Schema(
       currency: {
         type: String,
         required: true,
-        enum: ["USD", "RUB", "CNY"],
+        enum: ["USD", "EUR", "GBP", "INR", "JPY", "CNY", "RUB", "AUD", "CAD", "SGD", "AED", "SAR", "CHF", "ZAR", "BRL"],
       },
     },
     capacity: {

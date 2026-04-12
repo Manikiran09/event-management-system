@@ -6,15 +6,57 @@ import { useAuth } from "../context/AuthContext";
 
 const currencyMinimums = {
   USD: 15,
-  RUB: 1200,
+  EUR: 14,
+  GBP: 12,
+  INR: 1250,
+  JPY: 2250,
   CNY: 110,
+  RUB: 1400,
+  AUD: 23,
+  CAD: 21,
+  SGD: 20,
+  AED: 55,
+  SAR: 56,
+  CHF: 13,
+  ZAR: 280,
+  BRL: 75,
 };
 
 const currencySymbols = {
   USD: "$",
-  RUB: "RUB",
+  EUR: "EUR",
+  GBP: "GBP",
+  INR: "INR",
+  JPY: "JPY",
   CNY: "CNY",
+  RUB: "RUB",
+  AUD: "AUD",
+  CAD: "CAD",
+  SGD: "SGD",
+  AED: "AED",
+  SAR: "SAR",
+  CHF: "CHF",
+  ZAR: "ZAR",
+  BRL: "BRL",
 };
+
+const currencyOptions = [
+  { code: "USD", label: "USD ($)" },
+  { code: "EUR", label: "Euro (EUR)" },
+  { code: "GBP", label: "Pound (GBP)" },
+  { code: "INR", label: "India Rupee (INR ₹)" },
+  { code: "JPY", label: "Japan Yen (JPY)" },
+  { code: "CNY", label: "China Yuan (CNY)" },
+  { code: "RUB", label: "Russia Ruble (RUB)" },
+  { code: "AUD", label: "Australia Dollar (AUD)" },
+  { code: "CAD", label: "Canada Dollar (CAD)" },
+  { code: "SGD", label: "Singapore Dollar (SGD)" },
+  { code: "AED", label: "UAE Dirham (AED)" },
+  { code: "SAR", label: "Saudi Riyal (SAR)" },
+  { code: "CHF", label: "Swiss Franc (CHF)" },
+  { code: "ZAR", label: "South Africa Rand (ZAR)" },
+  { code: "BRL", label: "Brazil Real (BRL)" },
+];
 
 const toDatetimeLocalValue = (value) => {
   const date = new Date(value);
@@ -346,9 +388,9 @@ const EventsPage = () => {
                   value={form.ticketPriceCurrency}
                   onChange={handleCurrencyChange}
                 >
-                  <option value="USD">USD ($)</option>
-                  <option value="RUB">Russia (RUB)</option>
-                  <option value="CNY">China (CNY)</option>
+                  {currencyOptions.map((option) => (
+                    <option key={option.code} value={option.code}>{option.label}</option>
+                  ))}
                 </select>
               </div>
               <p className="-mt-1 text-xs text-slate-500 md:col-span-2">
@@ -435,9 +477,9 @@ const EventsPage = () => {
                           value={editForm.ticketPriceCurrency}
                           onChange={handleEditCurrencyChange}
                         >
-                          <option value="USD">USD ($)</option>
-                          <option value="RUB">Russia (RUB)</option>
-                          <option value="CNY">China (CNY)</option>
+                          {currencyOptions.map((option) => (
+                            <option key={option.code} value={option.code}>{option.label}</option>
+                          ))}
                         </select>
                       </div>
                     </div>

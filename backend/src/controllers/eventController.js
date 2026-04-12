@@ -4,8 +4,20 @@ import Registration from "../models/Registration.js";
 
 const currencyMinimums = {
   USD: 15,
-  RUB: 1200,
+  EUR: 14,
+  GBP: 12,
+  INR: 1250,
+  JPY: 2250,
   CNY: 110,
+  RUB: 1400,
+  AUD: 23,
+  CAD: 21,
+  SGD: 20,
+  AED: 55,
+  SAR: 56,
+  CHF: 13,
+  ZAR: 280,
+  BRL: 75,
 };
 
 const validatePricing = (ticketPrice) => {
