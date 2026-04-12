@@ -18,7 +18,7 @@ const TopNav = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 overflow-x-hidden border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 md:flex-row md:items-center md:justify-between md:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <Link to="/dashboard" className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2 text-sm font-bold tracking-tight text-white sm:px-4 sm:text-base md:text-lg">
@@ -27,7 +27,7 @@ const TopNav = () => {
             </IconShell>
             EventHub
           </Link>
-          <nav className="-mx-1 flex w-full gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
+          <nav className="-mx-1 flex w-full max-w-full gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
             <Link className={linkClass("/dashboard")} to="/dashboard">
               <span className="inline-flex items-center gap-2">
                 <DashboardIcon className="h-4 w-4" />

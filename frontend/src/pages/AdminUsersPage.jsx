@@ -224,8 +224,8 @@ const AdminUsersPage = () => {
                 <article key={user.id} className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-glow">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-slate-950">{user.name}</p>
-                      <p className="text-sm text-slate-600">{user.email}</p>
+                      <p className="break-words font-semibold text-slate-950">{user.name}</p>
+                      <p className="break-all text-sm text-slate-600">{user.email}</p>
                     </div>
                     <span className="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">{user.role}</span>
                   </div>
@@ -294,8 +294,8 @@ const AdminUsersPage = () => {
                   <article key={user.id} className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-glow">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold text-slate-950">{user.name}</p>
-                        <p className="text-sm text-slate-600">{user.email}</p>
+                        <p className="break-words font-semibold text-slate-950">{user.name}</p>
+                        <p className="break-all text-sm text-slate-600">{user.email}</p>
                       </div>
                       <span className="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">{user.role}</span>
                     </div>
