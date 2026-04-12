@@ -4,6 +4,8 @@ import User from "../models/User.js";
 
 const allowedRoles = ["admin", "organizer", "participant"];
 
+const normalizeEmail = (email = "") => email.trim().toLowerCase();
+
 const serializeUser = (user) => ({
   id: user._id,
   name: user.name,
@@ -30,6 +32,7 @@ const createToken = (user) => {
 const register = async (req, res) => {
   try {
     const { name, email, password, role = "participant", adminKey } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Name, email, and password are required" });
@@ -45,7 +48,7 @@ const register = async (req, res) => {
       return res.status(403).json({ message: "Invalid admin registration key" });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({ message: "Email already registered" });
     }
@@ -54,7 +57,7 @@ const register = async (req, res) => {
 
     const user = await User.create({
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password: hashedPassword,
       role,
       accountStatus: isAdminRegistration ? "approved" : "pending",
@@ -77,6 +80,7 @@ const register = async (req, res) => {
 const createUserByAdmin = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: "Name, email, password, and role are required" });
@@ -86,7 +90,7 @@ const createUserByAdmin = async (req, res) => {
       return res.status(400).json({ message: "Invalid role" });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({ message: "Email already registered" });
     }
@@ -95,7 +99,7 @@ const createUserByAdmin = async (req, res) => {
 
     const user = await User.create({
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password: hashedPassword,
       role,
       accountStatus: "approved",
@@ -124,14 +128,15 @@ const updateUserByAdmin = async (req, res) => {
 
     if (name !== undefined) user.name = name;
     if (email !== undefined) {
+      const normalizedEmail = normalizeEmail(email);
       const existingUser = await User.findOne({
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         _id: { $ne: userId },
       });
       if (existingUser) {
         return res.status(409).json({ message: "Email already registered" });
       }
-      user.email = email.toLowerCase();
+      user.email = normalizedEmail;
     }
     if (role !== undefined) {
       if (!allowedRoles.includes(role)) {
@@ -227,14 +232,15 @@ const rejectUser = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Account not found. Please use your registered email or create a new account." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
