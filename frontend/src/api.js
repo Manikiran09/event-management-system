@@ -28,15 +28,14 @@ const getRuntimeApiBaseUrl = () => {
 };
 
 const getConfiguredApiBaseUrl = () => {
-  const fromEnv = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL || "");
-
-  if (fromEnv) {
-    return fromEnv;
-  }
-
   const fromRuntime = getRuntimeApiBaseUrl();
   if (fromRuntime) {
     return fromRuntime;
+  }
+
+  const fromEnv = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL || "");
+  if (fromEnv) {
+    return fromEnv;
   }
 
   return "/api";

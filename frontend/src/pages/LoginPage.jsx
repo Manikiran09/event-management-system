@@ -24,13 +24,23 @@ const LoginPage = () => {
       await login(form.email, form.password);
       navigate("/dashboard");
     } catch (apiError) {
-      const responseMessage = apiError.response?.data?.message;
-      const responseText = typeof apiError.response?.data === "string" ? apiError.response.data : "";
-      const fallbackMessage = apiError.response
-        ? "Login failed. Please verify your credentials and account status."
-        : "Cannot reach server. Check frontend API URL configuration (VITE_API_BASE_URL).";
+      const statusCode = apiError.response?.status;
+      const responseData = apiError.response?.data;
+      const responseMessage = responseData?.message || responseData?.error || responseData?.detail;
+      const responseText = typeof responseData === "string" ? responseData : "";
 
-      setError(responseMessage || responseText || fallbackMessage);
+      let fallbackMessage = "Login failed. Please verify your credentials and account status.";
+
+      if (!apiError.response) {
+        fallbackMessage = "Cannot reach server. Check or set API URL on this page.";
+      } else if (statusCode === 404) {
+        fallbackMessage = "API route not found. Set API URL to your Railway backend domain.";
+      } else if (statusCode && statusCode >= 500) {
+        fallbackMessage = "Backend error. Try again in a moment or check Railway logs.";
+      }
+
+      const resolvedMessage = responseMessage || responseText || fallbackMessage;
+      setError(statusCode ? `${resolvedMessage} (HTTP ${statusCode})` : resolvedMessage);
     } finally {
       setSubmitting(false);
     }
