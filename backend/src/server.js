@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
@@ -56,7 +57,17 @@ app.use(
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Event management API is running" });
+  const connectionStateMap = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
+
+  const dbState = connectionStateMap[mongoose.connection.readyState] || "unknown";
+  const status = dbState === "connected" ? "ok" : "degraded";
+
+  res.json({ status, message: "Event management API is running", database: dbState });
 });
 
 app.use("/api/auth", authRoutes);
@@ -86,12 +97,18 @@ app.get(
 );
 
 const PORT = process.env.PORT || 5112;
+const DB_RETRY_DELAY_MS = 5000;
 
-const startServer = async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+const connectWithRetry = async () => {
+  try {
+    await connectDB();
+  } catch (error) {
+    console.error(`MongoDB connect failed: ${error.message}. Retrying in ${DB_RETRY_DELAY_MS / 1000}s...`);
+    setTimeout(connectWithRetry, DB_RETRY_DELAY_MS);
+  }
 };
 
-startServer();
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  connectWithRetry();
+});
