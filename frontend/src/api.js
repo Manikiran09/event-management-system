@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
-const defaultProductionApiBaseUrl = "https://meticulous-sparkle-production-d2fc.up.railway.app/api";
+const defaultProductionApiBaseUrl = "https://meticulous-sparkle-production-d09a.up.railway.app/api";
 
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {
@@ -88,10 +88,11 @@ api.interceptors.response.use(
     }
 
     const status = error.response?.status;
+    const isNetworkFailure = !error.response;
     const shouldRetryWithFallback =
       !originalRequest.__didRetryWithFallback
       && import.meta.env.PROD
-      && [404, 405].includes(status || 0);
+      && (isNetworkFailure || [404, 405, 502, 503, 504].includes(status || 0));
 
     if (!shouldRetryWithFallback) {
       throw error;
