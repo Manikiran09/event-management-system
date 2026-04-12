@@ -12,6 +12,12 @@ L.Icon.Default.mergeOptions({
 });
 
 const defaultCenter = { lat: 20.5937, lng: 78.9629 };
+const institutionHintTerms = ["college", "university", "institute", "school", "company", "organization", "office", "campus"];
+
+const rankSuggestion = (displayName = "") => {
+  const value = displayName.toLowerCase();
+  return institutionHintTerms.reduce((score, term) => (value.includes(term) ? score + 1 : score), 0);
+};
 
 const MapClickSelector = ({ onSelect }) => {
   useMapEvents({
@@ -40,7 +46,7 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
 
   useEffect(() => {
     const query = locationValue.trim();
-    if (query.length < 3) {
+    if (query.length < 2) {
       setSuggestions([]);
       return;
     }
@@ -50,10 +56,23 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
     const fetchSuggestions = async () => {
       setSearching(true);
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`;
-        const response = await fetch(url, { signal: controller.signal });
-        const payload = await response.json();
-        setSuggestions(Array.isArray(payload) ? payload : []);
+        const genericUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
+        const institutionUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(`${query} ${institutionHintTerms.join(" ")}`)}`;
+
+        const [genericResponse, institutionResponse] = await Promise.all([
+          fetch(genericUrl, { signal: controller.signal }),
+          fetch(institutionUrl, { signal: controller.signal }),
+        ]);
+
+        const [genericPayload, institutionPayload] = await Promise.all([
+          genericResponse.json(),
+          institutionResponse.json(),
+        ]);
+
+        const merged = [...(Array.isArray(genericPayload) ? genericPayload : []), ...(Array.isArray(institutionPayload) ? institutionPayload : [])];
+        const unique = Array.from(new Map(merged.map((item) => [item.place_id, item])).values());
+        unique.sort((a, b) => rankSuggestion(b.display_name) - rankSuggestion(a.display_name));
+        setSuggestions(unique.slice(0, 8));
       } catch {
         setSuggestions([]);
       } finally {
@@ -61,9 +80,12 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
       }
     };
 
-    fetchSuggestions();
+    const timer = setTimeout(fetchSuggestions, 300);
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [locationValue]);
 
   const activeCoordinates = useMemo(() => {
