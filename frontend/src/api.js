@@ -1,11 +1,13 @@
 import axios from "axios";
 
 const defaultProductionApiBaseUrl = "https://event-management-system-production-c946.up.railway.app/api";
-const apiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? defaultProductionApiBaseUrl : "/api");
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.PROD ? defaultProductionApiBaseUrl : "/api");
 
 const api = axios.create({
   baseURL: apiBaseUrl,
+  timeout: 15000,
 });
 
 api.interceptors.request.use((config) => {

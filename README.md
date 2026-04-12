@@ -45,37 +45,32 @@ Frontend runs at `http://localhost:5173`.
 
 ## Deployment
 
-### Backend on Render
+### Backend on Railway
 1. Push this project to GitHub.
-2. In Render, create a new `Web Service` and connect your repo.
-3. Use these settings:
-	- Root Directory: `backend`
-	- Build Command: `npm install`
-	- Start Command: `npm start`
-4. Add environment variables in Render:
-	- `MONGO_URI=mongodb+srv://admin:123@cluster0.fu6jdht.mongodb.net/event_management?retryWrites=true&w=majority&appName=Cluster0`
-	- `JWT_SECRET=dev-secret-change-this`
-	- `JWT_EXPIRES_IN=1d` 
-	- `ADMIN_REGISTRATION_KEY=admin-secret-key`
-	- `PORT=5112`
- 	- `FRONTEND_URL=http://localhost:5173`
+2. In Railway, create a new project from this repo.
+3. Deploy using `railway.toml` (already included at project root).
+4. Add these Railway environment variables:
+	- `MONGO_URI=your-mongodb-connection-string`
+	- `JWT_SECRET=your-strong-secret`
+	- `JWT_EXPIRES_IN=1d`
+	- `ADMIN_REGISTRATION_KEY=your-admin-registration-key`
+	- `FRONTEND_URL=https://your-vercel-app.vercel.app`
+5. Deploy and copy your Railway backend URL:
+	- Example: `https://your-service.up.railway.app`
 
+Notes:
+- `PORT` is injected by Railway automatically.
+- To allow multiple frontend domains, set `FRONTEND_URL` as comma-separated origins.
 
+### Frontend on Vercel
+1. In Vercel, import this GitHub repo.
+2. Set **Root Directory** to `frontend`.
+3. Framework preset: `Vite`.
+4. Add environment variable in Vercel project:
+	- `VITE_API_BASE_URL=https://your-service.up.railway.app/api`
+5. Deploy.
 
-
-
-5. Deploy and copy your backend URL (example: `https://your-app.onrender.com`).
-
-You can also deploy with the Render blueprint file at `render.yaml`.
-
-### Frontend on GitHub Pages
-1. In GitHub repo settings, enable `Pages` with source `GitHub Actions`.
-2. Add repo variable:
-	- `VITE_API_BASE_URL` = `https://your-app.onrender.com/api`
-3. Push to `main`.
-4. Workflow `.github/workflows/deploy-frontend.yml` will build and deploy automatically.
-
-Note: Frontend routing uses `HashRouter` for reliable deep-link support on GitHub Pages.
+`frontend/vercel.json` is included to ensure SPA routing works with direct/deep links.
 
 ## Main API Endpoints
 - `POST /api/auth/register`

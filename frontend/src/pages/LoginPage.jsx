@@ -23,7 +23,13 @@ const LoginPage = () => {
       await login(form.email, form.password);
       navigate("/dashboard");
     } catch (apiError) {
-      setError(apiError.response?.data?.message || "Login failed");
+      const responseMessage = apiError.response?.data?.message;
+      const responseText = typeof apiError.response?.data === "string" ? apiError.response.data : "";
+      const fallbackMessage = apiError.response
+        ? "Login failed. Please verify your credentials and account status."
+        : "Cannot reach server. Check frontend API URL configuration (VITE_API_BASE_URL).";
+
+      setError(responseMessage || responseText || fallbackMessage);
     } finally {
       setSubmitting(false);
     }
