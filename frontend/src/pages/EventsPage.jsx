@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
 import LocationPickerMap from "../components/LocationPickerMap";
 import TopNav from "../components/TopNav";
@@ -86,10 +86,10 @@ const EventsPage = () => {
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingEventId, setEditingEventId] = useState(null);
-  const [editForm, setEditForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const eventFormRef = useRef(null);
 
   const isManager = user?.role === "admin" || user?.role === "organizer";
 
@@ -159,12 +159,12 @@ const EventsPage = () => {
     });
   };
 
-  const handleCreate = async (event) => {
+  const handleSubmitEvent = async (event) => {
     event.preventDefault();
     setMessage("");
     setError("");
 
-    if (!form.locationCoordinates) {
+    if (!editingEventId && !form.locationCoordinates) {
       setError("Please select a location from map or suggestions");
       return;
     }
@@ -181,24 +181,36 @@ const EventsPage = () => {
     }
 
     try {
-      await api.post("/events", {
+      const payload = {
         title: form.title,
         description: form.description,
         date: form.date,
         location: form.location,
-        locationCoordinates: form.locationCoordinates,
         paymentMethods: form.paymentMethods,
         ticketPrice: {
           amount: Number(form.ticketPriceAmount),
           currency: form.ticketPriceCurrency,
         },
         capacity: Number(form.capacity),
-      });
-      setMessage("Event created");
+      };
+
+      if (form.locationCoordinates) {
+        payload.locationCoordinates = form.locationCoordinates;
+      }
+
+      if (editingEventId) {
+        await api.patch(`/events/${editingEventId}`, payload);
+        setMessage("Event updated");
+      } else {
+        await api.post("/events", payload);
+        setMessage("Event created");
+      }
+
       setForm(initialForm);
+      setEditingEventId(null);
       await loadData();
     } catch (apiError) {
-      setError(apiError.response?.data?.message || "Failed to create event");
+      setError(apiError.response?.data?.message || "Failed to save event");
     }
   };
 
@@ -230,11 +242,17 @@ const EventsPage = () => {
 
   const startEdit = (event) => {
     setEditingEventId(event._id);
-    setEditForm({
+    setForm({
       title: event.title || "",
       description: event.description || "",
       date: toDatetimeLocalValue(event.date),
       location: event.location || "",
+      locationCoordinates: event.locationCoordinates
+        ? {
+          lat: Number(event.locationCoordinates.lat),
+          lng: Number(event.locationCoordinates.lng),
+        }
+        : null,
       capacity: event.capacity || 1,
       paymentMethods: Array.isArray(event.paymentMethods) && event.paymentMethods.length > 0
         ? event.paymentMethods
@@ -242,83 +260,15 @@ const EventsPage = () => {
       ticketPriceAmount: event.ticketPrice?.amount ?? currencyMinimums.USD,
       ticketPriceCurrency: event.ticketPrice?.currency || "USD",
     });
+
+    setMessage("");
+    setError("");
+    eventFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const cancelEdit = () => {
     setEditingEventId(null);
-    setEditForm(null);
-  };
-
-  const handleEditChange = (event) => {
-    const { name, value } = event.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleEditCurrencyChange = (event) => {
-    const currency = event.target.value;
-    setEditForm((prev) => {
-      const minAmount = currencyMinimums[currency];
-      const amount = Number(prev.ticketPriceAmount);
-      return {
-        ...prev,
-        ticketPriceCurrency: currency,
-        ticketPriceAmount: Number.isFinite(amount) && amount >= minAmount ? amount : minAmount,
-      };
-    });
-  };
-
-  const handleEditPaymentMethodToggle = (method) => {
-    setEditForm((prev) => {
-      const exists = prev.paymentMethods.includes(method);
-      const next = exists
-        ? prev.paymentMethods.filter((item) => item !== method)
-        : prev.paymentMethods.concat(method);
-
-      return {
-        ...prev,
-        paymentMethods: next.length > 0 ? next : [method],
-      };
-    });
-  };
-
-  const handleEditSave = async (eventId) => {
-    if (!editForm) {
-      return;
-    }
-
-    const minimumAmount = currencyMinimums[editForm.ticketPriceCurrency];
-    if (Number(editForm.ticketPriceAmount) < minimumAmount) {
-      setError(`Minimum amount for ${editForm.ticketPriceCurrency} is ${minimumAmount}`);
-      return;
-    }
-
-    if (!editForm.paymentMethods || editForm.paymentMethods.length === 0) {
-      setError("Select at least one payment method");
-      return;
-    }
-
-    setMessage("");
-    setError("");
-
-    try {
-      await api.patch(`/events/${eventId}`, {
-        title: editForm.title,
-        description: editForm.description,
-        date: editForm.date,
-        location: editForm.location,
-        capacity: Number(editForm.capacity),
-        paymentMethods: editForm.paymentMethods,
-        ticketPrice: {
-          amount: Number(editForm.ticketPriceAmount),
-          currency: editForm.ticketPriceCurrency,
-        },
-      });
-      setMessage("Event updated");
-      cancelEdit();
-      await loadData();
-    } catch (apiError) {
-      setError(apiError.response?.data?.message || "Failed to update event");
-    }
+    setForm(initialForm);
   };
 
   return (
@@ -339,15 +289,19 @@ const EventsPage = () => {
         {error ? <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
         {isManager ? (
-          <section className="mb-8 rounded-3xl border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur-md md:p-6">
+          <section ref={eventFormRef} className="mb-8 rounded-3xl border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur-md md:p-6">
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
-                <h2 className="font-display text-[1.65rem] font-bold tracking-tight text-slate-950">Create Event</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600">Build a new event with schedule, location, and capacity.</p>
+                <h2 className="font-display text-[1.65rem] font-bold tracking-tight text-slate-950">{editingEventId ? "Edit Event" : "Create Event"}</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  {editingEventId
+                    ? "Update event details, location, pricing, and payment methods."
+                    : "Build a new event with schedule, location, and capacity."}
+                </p>
               </div>
               <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">Management</span>
             </div>
-            <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreate}>
+            <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmitEvent}>
               <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15 md:col-span-2" name="title" placeholder="Title" value={form.title} onChange={handleChange} required />
               <textarea
                 className="w-full min-h-32 rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15 md:col-span-2"
@@ -412,7 +366,16 @@ const EventsPage = () => {
                 required
               />
               <div className="md:col-span-2">
-                <button className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" type="submit">Create Event</button>
+                <div className="flex flex-wrap gap-3">
+                  <button className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" type="submit">
+                    {editingEventId ? "Update Event" : "Create Event"}
+                  </button>
+                  {editingEventId ? (
+                    <button type="button" className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700" onClick={cancelEdit}>
+                      Cancel Edit
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </form>
           </section>
@@ -428,7 +391,6 @@ const EventsPage = () => {
             const canManage =
               (user?.role === "admin" || user?.role === "organizer") &&
               (user?.role === "admin" || event.createdBy?._id === user?.id);
-            const isEditing = editingEventId === event._id && !!editForm;
 
             return (
               <article key={event._id} className="flex h-full flex-col justify-between rounded-3xl border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur-md md:p-6">
@@ -439,70 +401,22 @@ const EventsPage = () => {
                       {event.availableSeats} seats left
                     </span>
                   </div>
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900" name="title" value={editForm.title} onChange={handleEditChange} />
-                      <textarea className="w-full min-h-24 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900" name="description" value={editForm.description} onChange={handleEditChange} />
-                      <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900" type="datetime-local" name="date" value={editForm.date} onChange={handleEditChange} />
-                      <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900" name="location" value={editForm.location} onChange={handleEditChange} />
-                      <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900" type="number" min="1" name="capacity" value={editForm.capacity} onChange={handleEditChange} />
-
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment methods</p>
-                        <div className="mt-2 flex flex-wrap gap-3">
-                          {["debit", "credit", "visa"].map((method) => (
-                            <label key={method} className="inline-flex items-center gap-2 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={editForm.paymentMethods.includes(method)}
-                                onChange={() => handleEditPaymentMethodToggle(method)}
-                              />
-                              {method.toUpperCase()}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                          type="number"
-                          name="ticketPriceAmount"
-                          min={currencyMinimums[editForm.ticketPriceCurrency]}
-                          value={editForm.ticketPriceAmount}
-                          onChange={handleEditChange}
-                        />
-                        <select
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                          value={editForm.ticketPriceCurrency}
-                          onChange={handleEditCurrencyChange}
-                        >
-                          {currencyOptions.map((option) => (
-                            <option key={option.code} value={option.code}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h3 className="font-display text-[1.6rem] font-bold tracking-tight text-slate-950">{event.title}</h3>
-                      <p className="mt-3 max-h-24 overflow-hidden text-sm leading-6 text-slate-600">{event.description}</p>
-                      <div className="mt-5 space-y-2 text-sm text-slate-700">
-                        <p><strong>Date:</strong> {new Date(event.date).toLocaleString()}</p>
-                        <p><strong>Seats:</strong> {event.registeredCount} / {event.capacity}</p>
-                        <p><strong>Price:</strong> {currencySymbols[event.ticketPrice?.currency] || event.ticketPrice?.currency} {event.ticketPrice?.amount}</p>
-                        <p className="flex flex-wrap items-center gap-2">
-                          <strong>Payment:</strong>
-                          {(event.paymentMethods || []).map((method) => (
-                            <span key={method} className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold uppercase text-slate-700">
-                              {method}
-                            </span>
-                          ))}
-                        </p>
-                        <p><strong>Organizer:</strong> {event.createdBy?.name || "Unknown"}</p>
-                      </div>
-                    </>
-                  )}
+                  <h3 className="font-display text-[1.6rem] font-bold tracking-tight text-slate-950">{event.title}</h3>
+                  <p className="mt-3 max-h-24 overflow-hidden text-sm leading-6 text-slate-600">{event.description}</p>
+                  <div className="mt-5 space-y-2 text-sm text-slate-700">
+                    <p><strong>Date:</strong> {new Date(event.date).toLocaleString()}</p>
+                    <p><strong>Seats:</strong> {event.registeredCount} / {event.capacity}</p>
+                    <p><strong>Price:</strong> {currencySymbols[event.ticketPrice?.currency] || event.ticketPrice?.currency} {event.ticketPrice?.amount}</p>
+                    <p className="flex flex-wrap items-center gap-2">
+                      <strong>Payment:</strong>
+                      {(event.paymentMethods || []).map((method) => (
+                        <span key={method} className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold uppercase text-slate-700">
+                          {method}
+                        </span>
+                      ))}
+                    </p>
+                    <p><strong>Organizer:</strong> {event.createdBy?.name || "Unknown"}</p>
+                  </div>
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   {canRegister ? (
@@ -514,19 +428,9 @@ const EventsPage = () => {
                   {user?.role === "participant" && !isRegistered && event.availableSeats <= 0 ? (
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">Full</span>
                   ) : null}
-                  {canManage && !isEditing ? (
+                  {canManage ? (
                     <button type="button" className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-900/10 transition hover:-translate-y-0.5" onClick={() => startEdit(event)}>
                       Edit
-                    </button>
-                  ) : null}
-                  {canManage && isEditing ? (
-                    <button type="button" className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5" onClick={() => handleEditSave(event._id)}>
-                      Save
-                    </button>
-                  ) : null}
-                  {canManage && isEditing ? (
-                    <button type="button" className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700" onClick={cancelEdit}>
-                      Cancel
                     </button>
                   ) : null}
                   {canManage ? (
