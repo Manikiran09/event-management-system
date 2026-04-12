@@ -518,10 +518,10 @@ const EventsPage = () => {
         </section>
 
         {checkoutEvent ? (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-4">
-            <div className="w-full max-w-xl rounded-3xl border border-white/60 bg-white p-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-3 py-4 sm:px-4">
+            <div className="w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-white/60 bg-white p-4 shadow-2xl sm:p-6">
               <div className="mb-4">
-                <h3 className="font-display text-2xl font-bold tracking-tight text-slate-950">Pay & Register</h3>
+                <h3 className="font-display text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Pay & Register</h3>
                 <p className="mt-1 text-sm text-slate-600">{checkoutEvent.title}</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">
                   Amount: {currencySymbols[checkoutEvent.ticketPrice?.currency] || checkoutEvent.ticketPrice?.currency} {checkoutEvent.ticketPrice?.amount}

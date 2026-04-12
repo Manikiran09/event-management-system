@@ -75,8 +75,8 @@ const LoginPage = () => {
   };
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-6 md:py-8">
-      <section className="grid w-full max-w-[1120px] overflow-hidden rounded-[2rem] border border-white/50 bg-white/35 shadow-glow backdrop-blur-2xl lg:grid-cols-[1.1fr_0.9fr]">
+    <main className="grid min-h-[100dvh] place-items-center px-3 py-4 sm:px-4 md:py-8">
+      <section className="grid w-full max-w-[1120px] overflow-hidden rounded-[1.75rem] border border-white/50 bg-white/35 shadow-glow backdrop-blur-2xl lg:grid-cols-[1.1fr_0.9fr]">
         <aside className="relative hidden min-h-[520px] overflow-hidden bg-slate-950 p-8 text-white lg:block xl:p-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(45,212,191,0.24),transparent_30%),radial-gradient(circle_at_80%_30%,rgba(56,189,248,0.22),transparent_28%),linear-gradient(145deg,rgba(15,23,42,0.98),rgba(8,47,73,0.96))]" />
           <div className="relative z-10 flex h-full flex-col justify-between">
@@ -105,7 +105,7 @@ const LoginPage = () => {
           </div>
         </aside>
 
-        <section className="w-full rounded-none border-0 bg-white/85 p-6 md:p-8 lg:rounded-none lg:rounded-r-[2rem] xl:p-10">
+        <section className="w-full rounded-none border-0 bg-white/85 p-5 sm:p-6 md:p-8 lg:rounded-none lg:rounded-r-[2rem] xl:p-10">
           <div className="mb-8">
             <p className="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Welcome back</p>
             <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-slate-950 md:text-[2.1rem]">Sign In</h1>

@@ -41,9 +41,9 @@ const DashboardPage = () => {
   }, [user?.role]);
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-[100dvh]">
       <TopNav />
-      <section className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
+      <section className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-4 md:px-6 md:py-8">
         <section className="overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-0 shadow-glow backdrop-blur-md">
           <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="bg-slate-950 px-6 py-8 text-white md:px-8 md:py-10">
