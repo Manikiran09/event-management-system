@@ -19,6 +19,26 @@ const rankSuggestion = (displayName = "") => {
   return institutionHintTerms.reduce((score, term) => (value.includes(term) ? score + 1 : score), 0);
 };
 
+const normalizeNominatimItem = (item) => ({
+  place_id: `n-${item.place_id}`,
+  display_name: item.display_name,
+  lat: Number(item.lat),
+  lon: Number(item.lon),
+});
+
+const normalizePhotonItem = (feature) => {
+  const props = feature.properties || {};
+  const coords = feature.geometry?.coordinates || [];
+  const labelParts = [props.name, props.city, props.state, props.country].filter(Boolean);
+
+  return {
+    place_id: `p-${props.osm_id || `${coords[1]}-${coords[0]}`}`,
+    display_name: labelParts.join(", ") || props.name || "Unknown place",
+    lat: Number(coords[1]),
+    lon: Number(coords[0]),
+  };
+};
+
 const MapClickSelector = ({ onSelect }) => {
   useMapEvents({
     async click(event) {
@@ -58,19 +78,37 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
       try {
         const genericUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
         const institutionUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(`${query} ${institutionHintTerms.join(" ")}`)}`;
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
 
-        const [genericResponse, institutionResponse] = await Promise.all([
+        const [genericResponse, institutionResponse, photonResponse] = await Promise.allSettled([
           fetch(genericUrl, { signal: controller.signal }),
           fetch(institutionUrl, { signal: controller.signal }),
+          fetch(photonUrl, { signal: controller.signal }),
         ]);
 
-        const [genericPayload, institutionPayload] = await Promise.all([
-          genericResponse.json(),
-          institutionResponse.json(),
-        ]);
+        const genericPayload = genericResponse.status === "fulfilled"
+          ? await genericResponse.value.json()
+          : [];
 
-        const merged = [...(Array.isArray(genericPayload) ? genericPayload : []), ...(Array.isArray(institutionPayload) ? institutionPayload : [])];
-        const unique = Array.from(new Map(merged.map((item) => [item.place_id, item])).values());
+        const institutionPayload = institutionResponse.status === "fulfilled"
+          ? await institutionResponse.value.json()
+          : [];
+
+        const photonPayload = photonResponse.status === "fulfilled"
+          ? await photonResponse.value.json()
+          : { features: [] };
+
+        const nominatimItems = [
+          ...(Array.isArray(genericPayload) ? genericPayload : []),
+          ...(Array.isArray(institutionPayload) ? institutionPayload : []),
+        ].map(normalizeNominatimItem);
+
+        const photonItems = (Array.isArray(photonPayload.features) ? photonPayload.features : [])
+          .map(normalizePhotonItem)
+          .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon));
+
+        const merged = [...nominatimItems, ...photonItems];
+        const unique = Array.from(new Map(merged.map((item) => [item.display_name.toLowerCase(), item])).values());
         unique.sort((a, b) => rankSuggestion(b.display_name) - rankSuggestion(a.display_name));
         setSuggestions(unique.slice(0, 8));
       } catch {
@@ -129,6 +167,12 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
             </button>
           ))}
         </div>
+      ) : null}
+
+      {!searching && locationValue.trim().length >= 2 && suggestions.length === 0 ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          No results yet. Try adding city/state or click map to pin exact location.
+        </p>
       ) : null}
 
       <div className="h-64 overflow-hidden rounded-2xl border border-slate-200">
