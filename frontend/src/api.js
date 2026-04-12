@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
+const defaultProductionApiBaseUrl = "https://meticulous-sparkle-production-d2fc.up.railway.app/api";
 
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {
@@ -38,6 +39,10 @@ const getConfiguredApiBaseUrl = () => {
     return fromEnv;
   }
 
+  if (import.meta.env.PROD) {
+    return defaultProductionApiBaseUrl;
+  }
+
   return "/api";
 };
 
@@ -73,6 +78,38 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (!originalRequest) {
+      throw error;
+    }
+
+    const status = error.response?.status;
+    const shouldRetryWithFallback =
+      !originalRequest.__didRetryWithFallback
+      && import.meta.env.PROD
+      && [404, 405].includes(status || 0);
+
+    if (!shouldRetryWithFallback) {
+      throw error;
+    }
+
+    const currentBaseUrl = normalizeApiBaseUrl(originalRequest.baseURL || "");
+
+    if (currentBaseUrl === defaultProductionApiBaseUrl) {
+      throw error;
+    }
+
+    originalRequest.__didRetryWithFallback = true;
+    originalRequest.baseURL = defaultProductionApiBaseUrl;
+    setRuntimeApiBaseUrl(defaultProductionApiBaseUrl);
+
+    return api(originalRequest);
+  }
+);
 
 export { getConfiguredApiBaseUrl, setRuntimeApiBaseUrl };
 export default api;

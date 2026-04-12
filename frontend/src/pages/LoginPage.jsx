@@ -35,6 +35,8 @@ const LoginPage = () => {
         fallbackMessage = "Cannot reach server. Check or set API URL on this page.";
       } else if (statusCode === 404) {
         fallbackMessage = "API route not found. Set API URL to your Railway backend domain.";
+      } else if (statusCode === 405) {
+        fallbackMessage = "Method not allowed from current API target. Set API URL to your Railway backend domain.";
       } else if (statusCode && statusCode >= 500) {
         fallbackMessage = "Backend error. Try again in a moment or check Railway logs.";
       }
