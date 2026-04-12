@@ -2,12 +2,94 @@ import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 
+const currencyMinimums = {
+  USD: 15,
+  RUB: 1200,
+  CNY: 110,
+};
+
+const validatePricing = (ticketPrice) => {
+  if (!ticketPrice || typeof ticketPrice !== "object") {
+    return "Ticket price is required";
+  }
+
+  const { amount, currency } = ticketPrice;
+  const numericAmount = Number(amount);
+
+  if (!currencyMinimums[currency]) {
+    return "Invalid ticket currency";
+  }
+
+  if (!Number.isFinite(numericAmount)) {
+    return "Ticket amount must be a valid number";
+  }
+
+  if (numericAmount < currencyMinimums[currency]) {
+    return `Minimum amount for ${currency} is ${currencyMinimums[currency]}`;
+  }
+
+  return null;
+};
+
+const validateCoordinates = (locationCoordinates) => {
+  if (!locationCoordinates || typeof locationCoordinates !== "object") {
+    return "Location coordinates are required";
+  }
+
+  const lat = Number(locationCoordinates.lat);
+  const lng = Number(locationCoordinates.lng);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    return "Invalid latitude";
+  }
+
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    return "Invalid longitude";
+  }
+
+  return null;
+};
+
+const normalizePaymentMethods = (paymentMethods) => {
+  if (!Array.isArray(paymentMethods)) {
+    return [];
+  }
+
+  const allowed = new Set(["debit", "credit", "visa"]);
+  return [...new Set(paymentMethods.map((item) => String(item || "").toLowerCase().trim()))]
+    .filter((item) => allowed.has(item));
+};
+
 const createEvent = async (req, res) => {
   try {
-    const { title, description, date, location, capacity } = req.body;
+    const {
+      title,
+      description,
+      date,
+      location,
+      locationCoordinates,
+      paymentMethods,
+      ticketPrice,
+      capacity,
+    } = req.body;
 
     if (!title || !description || !date || !location || !capacity) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const coordinatesValidationError = validateCoordinates(locationCoordinates);
+    if (coordinatesValidationError) {
+      return res.status(400).json({ message: coordinatesValidationError });
+    }
+
+    const normalizedPaymentMethods = normalizePaymentMethods(paymentMethods);
+    if (normalizedPaymentMethods.length === 0) {
+      return res.status(400).json({ message: "At least one payment method is required" });
+    }
+
+    const pricingValidationError = validatePricing(ticketPrice);
+    if (pricingValidationError) {
+      return res.status(400).json({ message: pricingValidationError });
     }
 
     const eventDate = new Date(date);
@@ -24,6 +106,15 @@ const createEvent = async (req, res) => {
       description,
       date: eventDate,
       location,
+      locationCoordinates: {
+        lat: Number(locationCoordinates.lat),
+        lng: Number(locationCoordinates.lng),
+      },
+      paymentMethods: normalizedPaymentMethods,
+      ticketPrice: {
+        amount: Number(ticketPrice.amount),
+        currency: ticketPrice.currency,
+      },
       capacity,
       createdBy: req.user.userId,
     });
@@ -119,7 +210,42 @@ const updateEvent = async (req, res) => {
       }
     }
 
-    const fields = ["title", "description", "date", "location", "capacity"];
+    if (req.body.locationCoordinates !== undefined) {
+      const coordinatesValidationError = validateCoordinates(req.body.locationCoordinates);
+      if (coordinatesValidationError) {
+        return res.status(400).json({ message: coordinatesValidationError });
+      }
+    }
+
+    if (req.body.paymentMethods !== undefined) {
+      const normalizedPaymentMethods = normalizePaymentMethods(req.body.paymentMethods);
+      if (normalizedPaymentMethods.length === 0) {
+        return res.status(400).json({ message: "At least one payment method is required" });
+      }
+      req.body.paymentMethods = normalizedPaymentMethods;
+    }
+
+    if (req.body.ticketPrice !== undefined) {
+      const pricingValidationError = validatePricing(req.body.ticketPrice);
+      if (pricingValidationError) {
+        return res.status(400).json({ message: pricingValidationError });
+      }
+      req.body.ticketPrice = {
+        amount: Number(req.body.ticketPrice.amount),
+        currency: req.body.ticketPrice.currency,
+      };
+    }
+
+    const fields = [
+      "title",
+      "description",
+      "date",
+      "location",
+      "locationCoordinates",
+      "paymentMethods",
+      "ticketPrice",
+      "capacity",
+    ];
     fields.forEach((field) => {
       if (req.body[field] !== undefined) {
         event[field] = req.body[field];

@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import LocationPickerMap from "../components/LocationPickerMap";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
+
+const currencyMinimums = {
+  USD: 15,
+  RUB: 1200,
+  CNY: 110,
+};
 
 const initialForm = {
   title: "",
   description: "",
   date: "",
   location: "",
+  locationCoordinates: null,
+  paymentMethods: ["debit"],
+  ticketPriceAmount: 15,
+  ticketPriceCurrency: "USD",
   capacity: 50,
 };
 
@@ -53,14 +64,74 @@ const EventsPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleLocationChange = (value) => {
+    setForm((prev) => ({ ...prev, location: value }));
+  };
+
+  const handleCoordinatesChange = (coordinates) => {
+    setForm((prev) => ({ ...prev, locationCoordinates: coordinates }));
+  };
+
+  const handlePaymentMethodToggle = (method) => {
+    setForm((prev) => {
+      const exists = prev.paymentMethods.includes(method);
+      const next = exists
+        ? prev.paymentMethods.filter((item) => item !== method)
+        : prev.paymentMethods.concat(method);
+
+      return {
+        ...prev,
+        paymentMethods: next.length > 0 ? next : [method],
+      };
+    });
+  };
+
+  const handleCurrencyChange = (event) => {
+    const currency = event.target.value;
+    setForm((prev) => {
+      const minAmount = currencyMinimums[currency];
+      const amount = Number(prev.ticketPriceAmount);
+      return {
+        ...prev,
+        ticketPriceCurrency: currency,
+        ticketPriceAmount: Number.isFinite(amount) && amount >= minAmount ? amount : minAmount,
+      };
+    });
+  };
+
   const handleCreate = async (event) => {
     event.preventDefault();
     setMessage("");
     setError("");
 
+    if (!form.locationCoordinates) {
+      setError("Please select a location from map or suggestions");
+      return;
+    }
+
+    const minimumAmount = currencyMinimums[form.ticketPriceCurrency];
+    if (Number(form.ticketPriceAmount) < minimumAmount) {
+      setError(`Minimum amount for ${form.ticketPriceCurrency} is ${minimumAmount}`);
+      return;
+    }
+
+    if (form.paymentMethods.length === 0) {
+      setError("Select at least one payment method");
+      return;
+    }
+
     try {
       await api.post("/events", {
-        ...form,
+        title: form.title,
+        description: form.description,
+        date: form.date,
+        location: form.location,
+        locationCoordinates: form.locationCoordinates,
+        paymentMethods: form.paymentMethods,
+        ticketPrice: {
+          amount: Number(form.ticketPriceAmount),
+          currency: form.ticketPriceCurrency,
+        },
         capacity: Number(form.capacity),
       });
       setMessage("Event created");
@@ -134,7 +205,50 @@ const EventsPage = () => {
                 required
               />
               <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" type="datetime-local" name="date" value={form.date} onChange={handleChange} required />
-              <input className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15" name="location" placeholder="Location" value={form.location} onChange={handleChange} required />
+              <div className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment methods</p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {["debit", "credit", "visa"].map((method) => (
+                    <label key={method} className="inline-flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={form.paymentMethods.includes(method)}
+                        onChange={() => handlePaymentMethodToggle(method)}
+                      />
+                      {method.toUpperCase()}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15"
+                  type="number"
+                  name="ticketPriceAmount"
+                  min={currencyMinimums[form.ticketPriceCurrency]}
+                  value={form.ticketPriceAmount}
+                  onChange={handleChange}
+                  required
+                />
+                <select
+                  className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15"
+                  value={form.ticketPriceCurrency}
+                  onChange={handleCurrencyChange}
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="RUB">Russia (RUB)</option>
+                  <option value="CNY">China (CNY)</option>
+                </select>
+              </div>
+              <p className="-mt-1 text-xs text-slate-500 md:col-span-2">
+                Minimum amount: {currencyMinimums[form.ticketPriceCurrency]} {form.ticketPriceCurrency}
+              </p>
+              <LocationPickerMap
+                locationValue={form.location}
+                coordinates={form.locationCoordinates}
+                onLocationChange={handleLocationChange}
+                onCoordinatesChange={handleCoordinatesChange}
+              />
               <input
                 className="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15"
                 type="number"
@@ -176,6 +290,8 @@ const EventsPage = () => {
                   <div className="mt-5 space-y-2 text-sm text-slate-700">
                     <p><strong>Date:</strong> {new Date(event.date).toLocaleString()}</p>
                     <p><strong>Seats:</strong> {event.registeredCount} / {event.capacity}</p>
+                    <p><strong>Price:</strong> {event.ticketPrice?.amount} {event.ticketPrice?.currency}</p>
+                    <p><strong>Payment:</strong> {(event.paymentMethods || []).join(", ")}</p>
                     <p><strong>Organizer:</strong> {event.createdBy?.name || "Unknown"}</p>
                   </div>
                 </div>
