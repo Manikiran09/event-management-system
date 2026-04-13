@@ -1,7 +1,11 @@
 import axios from "axios";
 
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
-const defaultProductionApiBaseUrl = "https://meticulous-sparkle-production-d09a.up.railway.app/api";
+const productionApiCandidates = [
+  import.meta.env.VITE_API_BASE_URL || "",
+  "https://event-management-system-production-c946.up.railway.app/api",
+  "https://meticulous-sparkle-production-d09a.up.railway.app/api",
+];
 
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {
@@ -34,16 +38,47 @@ const getConfiguredApiBaseUrl = () => {
     return fromRuntime;
   }
 
-  const fromEnv = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL || "");
-  if (fromEnv) {
-    return fromEnv;
-  }
-
-  if (import.meta.env.PROD) {
-    return defaultProductionApiBaseUrl;
+  for (const candidate of productionApiCandidates) {
+    const normalizedCandidate = normalizeApiBaseUrl(candidate);
+    if (normalizedCandidate) {
+      return normalizedCandidate;
+    }
   }
 
   return "/api";
+};
+
+const isIpAddress = (value) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value || "");
+
+const getSameHostApiCandidates = () => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const { protocol, hostname } = window.location;
+  if (!hostname) {
+    return [];
+  }
+
+  const canUseSameHostPorts = hostname === "localhost" || hostname === "127.0.0.1" || isIpAddress(hostname);
+  if (!canUseSameHostPorts) {
+    return [];
+  }
+
+  const scheme = protocol === "https:" ? "https" : "http";
+
+  return [
+    normalizeApiBaseUrl(`${scheme}://${hostname}:10000`),
+    normalizeApiBaseUrl(`${scheme}://${hostname}:5112`),
+  ].filter(Boolean);
+};
+
+const getFallbackCandidates = () => {
+  const candidates = productionApiCandidates;
+
+  candidates.push(...getSameHostApiCandidates());
+
+  return [...new Set(candidates.map((value) => normalizeApiBaseUrl(value)).filter(Boolean))];
 };
 
 const setRuntimeApiBaseUrl = (value) => {
@@ -91,7 +126,6 @@ api.interceptors.response.use(
     const isNetworkFailure = !error.response;
     const shouldRetryWithFallback =
       !originalRequest.__didRetryWithFallback
-      && import.meta.env.PROD
       && (isNetworkFailure || [404, 405, 502, 503, 504].includes(status || 0));
 
     if (!shouldRetryWithFallback) {
@@ -100,13 +134,19 @@ api.interceptors.response.use(
 
     const currentBaseUrl = normalizeApiBaseUrl(originalRequest.baseURL || "");
 
-    if (currentBaseUrl === defaultProductionApiBaseUrl) {
+    const fallbackCandidates = getFallbackCandidates();
+    const nextBaseUrl = fallbackCandidates.find((candidate) => candidate && candidate !== currentBaseUrl);
+
+    if (!nextBaseUrl) {
       throw error;
     }
 
     originalRequest.__didRetryWithFallback = true;
-    originalRequest.baseURL = defaultProductionApiBaseUrl;
-    setRuntimeApiBaseUrl(defaultProductionApiBaseUrl);
+    originalRequest.baseURL = nextBaseUrl;
+
+    if (import.meta.env.PROD) {
+      setRuntimeApiBaseUrl(nextBaseUrl);
+    }
 
     return api(originalRequest);
   }
