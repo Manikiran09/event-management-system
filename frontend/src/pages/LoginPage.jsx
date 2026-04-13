@@ -154,6 +154,9 @@ const LoginPage = () => {
                     Reset saved API URL
                   </button>
                 ) : null}
+                <Link className="block text-sm font-semibold text-slate-700 underline decoration-slate-400 underline-offset-2" to="/phone-setup">
+                  Open Phone Setup Page
+                </Link>
               </div>
             ) : null}
             <button className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15 disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={submitting}>
@@ -163,6 +166,9 @@ const LoginPage = () => {
 
           <p className="mt-6 text-sm text-slate-600">
             New here? <Link className="font-semibold text-teal-700" to="/register">Create account</Link>
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            On another phone with connection issues? <Link className="font-semibold text-slate-700" to="/phone-setup">Open Phone Setup</Link>
           </p>
         </section>
       </section>
