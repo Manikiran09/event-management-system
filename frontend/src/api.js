@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
+let sessionApiBaseUrl = "";
 const productionApiCandidates = [
   import.meta.env.VITE_API_BASE_URL || "",
   "https://event-management-system-production-c946.up.railway.app/api",
@@ -33,6 +34,10 @@ const getRuntimeApiBaseUrl = () => {
 };
 
 const getConfiguredApiBaseUrl = () => {
+  if (sessionApiBaseUrl) {
+    return sessionApiBaseUrl;
+  }
+
   const fromRuntime = getRuntimeApiBaseUrl();
   if (fromRuntime) {
     return fromRuntime;
@@ -74,9 +79,12 @@ const getSameHostApiCandidates = () => {
 };
 
 const getFallbackCandidates = () => {
-  const candidates = productionApiCandidates;
-
-  candidates.push(...getSameHostApiCandidates());
+  const candidates = [
+    getRuntimeApiBaseUrl(),
+    sessionApiBaseUrl,
+    ...productionApiCandidates,
+    ...getSameHostApiCandidates(),
+  ];
 
   return [...new Set(candidates.map((value) => normalizeApiBaseUrl(value)).filter(Boolean))];
 };
@@ -90,11 +98,22 @@ const setRuntimeApiBaseUrl = (value) => {
 
   if (!normalized) {
     localStorage.removeItem(runtimeApiBaseUrlStorageKey);
+    sessionApiBaseUrl = "";
     return "";
   }
 
   localStorage.setItem(runtimeApiBaseUrlStorageKey, normalized);
+  sessionApiBaseUrl = normalized;
   return normalized;
+};
+
+const clearRuntimeApiBaseUrl = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.removeItem(runtimeApiBaseUrlStorageKey);
+  sessionApiBaseUrl = "";
 };
 
 const apiBaseUrl = getConfiguredApiBaseUrl();
@@ -124,33 +143,39 @@ api.interceptors.response.use(
 
     const status = error.response?.status;
     const isNetworkFailure = !error.response;
-    const shouldRetryWithFallback =
-      !originalRequest.__didRetryWithFallback
-      && (isNetworkFailure || [404, 405, 502, 503, 504].includes(status || 0));
+    const shouldRetryWithFallback = isNetworkFailure || [404, 405, 502, 503, 504].includes(status || 0);
 
     if (!shouldRetryWithFallback) {
       throw error;
     }
 
-    const currentBaseUrl = normalizeApiBaseUrl(originalRequest.baseURL || "");
+    const currentBaseUrl = normalizeApiBaseUrl(originalRequest.baseURL || getConfiguredApiBaseUrl() || "");
 
-    const fallbackCandidates = getFallbackCandidates();
-    const nextBaseUrl = fallbackCandidates.find((candidate) => candidate && candidate !== currentBaseUrl);
+    if (!Array.isArray(originalRequest.__fallbackCandidates)) {
+      originalRequest.__fallbackCandidates = getFallbackCandidates().filter((candidate) => candidate !== currentBaseUrl);
+      originalRequest.__fallbackAttemptIndex = 0;
+    }
+
+    const fallbackCandidates = originalRequest.__fallbackCandidates;
+    const attemptIndex = Number(originalRequest.__fallbackAttemptIndex || 0);
+    const nextBaseUrl = fallbackCandidates[attemptIndex] || "";
 
     if (!nextBaseUrl) {
+      if (getRuntimeApiBaseUrl()) {
+        clearRuntimeApiBaseUrl();
+      } else {
+        sessionApiBaseUrl = "";
+      }
       throw error;
     }
 
-    originalRequest.__didRetryWithFallback = true;
+    originalRequest.__fallbackAttemptIndex = attemptIndex + 1;
     originalRequest.baseURL = nextBaseUrl;
-
-    if (import.meta.env.PROD) {
-      setRuntimeApiBaseUrl(nextBaseUrl);
-    }
+    sessionApiBaseUrl = nextBaseUrl;
 
     return api(originalRequest);
   }
 );
 
-export { getConfiguredApiBaseUrl, setRuntimeApiBaseUrl };
+export { clearRuntimeApiBaseUrl, getConfiguredApiBaseUrl, setRuntimeApiBaseUrl };
 export default api;

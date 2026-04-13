@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { setRuntimeApiBaseUrl } from "../api";
+import { clearRuntimeApiBaseUrl, setRuntimeApiBaseUrl } from "../api";
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [showApiUrlAction, setShowApiUrlAction] = useState(false);
+  const [showResetApiUrlAction, setShowResetApiUrlAction] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const LoginPage = () => {
     event.preventDefault();
     setError("");
     setShowApiUrlAction(false);
+    setShowResetApiUrlAction(false);
     setSubmitting(true);
 
     try {
@@ -31,6 +33,8 @@ const LoginPage = () => {
       const responseMessage = responseData?.message || responseData?.error || responseData?.detail;
       const responseText = typeof responseData === "string" ? responseData : "";
       const shouldShowApiAction = !apiError.response || [404, 405].includes(statusCode || 0) || (statusCode && statusCode >= 500);
+      const hasRuntimeOverride = typeof window !== "undefined" && Boolean(localStorage.getItem("runtime_api_base_url"));
+      const shouldAutoClearRuntimeOverride = !apiError.response && hasRuntimeOverride;
 
       let fallbackMessage = "Login failed. Please verify your credentials and account status.";
 
@@ -44,9 +48,15 @@ const LoginPage = () => {
         fallbackMessage = "Backend error. Try again in a moment or check Railway logs.";
       }
 
+      if (shouldAutoClearRuntimeOverride) {
+        clearRuntimeApiBaseUrl();
+        fallbackMessage = "Saved API URL was unreachable and has been cleared for this device. Try signing in again.";
+      }
+
       const resolvedMessage = responseMessage || responseText || fallbackMessage;
       setError(resolvedMessage);
       setShowApiUrlAction(shouldShowApiAction);
+      setShowResetApiUrlAction(hasRuntimeOverride && !shouldAutoClearRuntimeOverride);
     } finally {
       setSubmitting(false);
     }
@@ -72,6 +82,14 @@ const LoginPage = () => {
 
     setError(`API URL updated to ${normalizedUrl}. Try signing in again.`);
     setShowApiUrlAction(false);
+    setShowResetApiUrlAction(true);
+  };
+
+  const handleResetApiUrl = () => {
+    clearRuntimeApiBaseUrl();
+    setError("Saved API URL cleared for this device. Try signing in again.");
+    setShowApiUrlAction(false);
+    setShowResetApiUrlAction(false);
   };
 
   return (
@@ -125,6 +143,15 @@ const LoginPage = () => {
                     onClick={handleConfigureApiUrl}
                   >
                     Set API URL
+                  </button>
+                ) : null}
+                {showResetApiUrlAction ? (
+                  <button
+                    className="text-sm font-semibold text-slate-700 underline decoration-slate-400 underline-offset-2"
+                    type="button"
+                    onClick={handleResetApiUrl}
+                  >
+                    Reset saved API URL
                   </button>
                 ) : null}
               </div>
