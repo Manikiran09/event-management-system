@@ -4,8 +4,7 @@ const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
 let sessionApiBaseUrl = "";
 const productionApiCandidates = [
   import.meta.env.VITE_API_BASE_URL || "",
-  "https://event-management-system-production-c946.up.railway.app/api",
-  "https://meticulous-sparkle-production-d09a.up.railway.app/api",
+  "https://event-management-system-production-ec52.up.railway.app/api",
 ];
 
 const normalizeApiBaseUrl = (value) => {
