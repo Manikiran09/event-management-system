@@ -31,6 +31,21 @@ const productionApiCandidates = [
   .map((value) => normalizeApiBaseUrl(value))
   .filter((value) => isAbsoluteHttpUrl(value));
 
+const isIpAddress = (value) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value || "");
+
+const shouldPreferProxyApi = () => {
+  if (import.meta.env.DEV) {
+    return true;
+  }
+
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const host = (window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || isIpAddress(host);
+};
+
 const getRuntimeApiBaseUrl = () => {
   if (typeof window === "undefined") {
     return "";
@@ -49,6 +64,10 @@ const getConfiguredApiBaseUrl = () => {
     return fromRuntime;
   }
 
+  if (shouldPreferProxyApi()) {
+    return "/api";
+  }
+
   for (const candidate of productionApiCandidates) {
     const normalizedCandidate = normalizeApiBaseUrl(candidate);
     if (normalizedCandidate) {
@@ -58,8 +77,6 @@ const getConfiguredApiBaseUrl = () => {
 
   return "/api";
 };
-
-const isIpAddress = (value) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value || "");
 
 const getSameHostApiCandidates = () => {
   if (typeof window === "undefined") {
@@ -85,12 +102,11 @@ const getSameHostApiCandidates = () => {
 };
 
 const getFallbackCandidates = () => {
-  const candidates = [
-    getRuntimeApiBaseUrl(),
-    sessionApiBaseUrl,
-    ...productionApiCandidates,
-    ...getSameHostApiCandidates(),
-  ];
+  const localFirstCandidates = shouldPreferProxyApi()
+    ? ["/api", ...getSameHostApiCandidates(), ...productionApiCandidates]
+    : [...productionApiCandidates, ...getSameHostApiCandidates()];
+
+  const candidates = [getRuntimeApiBaseUrl(), sessionApiBaseUrl, ...localFirstCandidates];
 
   return [...new Set(candidates.map((value) => normalizeApiBaseUrl(value)).filter(Boolean))];
 };
