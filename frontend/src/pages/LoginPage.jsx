@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { clearRuntimeApiBaseUrl, setRuntimeApiBaseUrl } from "../api";
+import { clearRuntimeApiBaseUrl, setRuntimeApiBaseUrl, warmupApiBaseUrl } from "../api";
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -11,6 +11,12 @@ const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    warmupApiBaseUrl().catch(() => {
+      // Login submit still runs fallback retries if warmup fails.
+    });
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

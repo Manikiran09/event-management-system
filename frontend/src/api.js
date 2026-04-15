@@ -2,6 +2,7 @@ import axios from "axios";
 
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
 let sessionApiBaseUrl = "";
+let warmupPromise = null;
 const productionApiCandidates = [
   import.meta.env.VITE_API_BASE_URL || "",
   "https://event-management-system-production-f464.up.railway.app/api",
@@ -86,6 +87,67 @@ const getFallbackCandidates = () => {
   ];
 
   return [...new Set(candidates.map((value) => normalizeApiBaseUrl(value)).filter(Boolean))];
+};
+
+const canReachApiBaseUrl = async (baseUrl) => {
+  if (!baseUrl) {
+    return false;
+  }
+
+  try {
+    const response = await axios.get(`${baseUrl}/health`, {
+      timeout: 20000,
+      headers: { "Cache-Control": "no-cache" },
+    });
+
+    return response.status >= 200 && response.status < 500;
+  } catch {
+    return false;
+  }
+};
+
+const warmupApiBaseUrl = async ({ force = false } = {}) => {
+  if (typeof window === "undefined") {
+    return getConfiguredApiBaseUrl();
+  }
+
+  if (!force && sessionApiBaseUrl) {
+    return sessionApiBaseUrl;
+  }
+
+  if (warmupPromise) {
+    return warmupPromise;
+  }
+
+  warmupPromise = (async () => {
+    const configured = normalizeApiBaseUrl(getConfiguredApiBaseUrl());
+    const candidates = getFallbackCandidates();
+
+    if (configured && !candidates.includes(configured)) {
+      candidates.unshift(configured);
+    }
+
+    for (const candidate of candidates) {
+      // Probe API candidates so login/register can use a reachable backend immediately.
+      if (await canReachApiBaseUrl(candidate)) {
+        sessionApiBaseUrl = candidate;
+        return candidate;
+      }
+    }
+
+    if (getRuntimeApiBaseUrl()) {
+      clearRuntimeApiBaseUrl();
+    }
+
+    sessionApiBaseUrl = "";
+    return getConfiguredApiBaseUrl();
+  })();
+
+  try {
+    return await warmupPromise;
+  } finally {
+    warmupPromise = null;
+  }
 };
 
 const setRuntimeApiBaseUrl = (value) => {
@@ -176,5 +238,5 @@ api.interceptors.response.use(
   }
 );
 
-export { clearRuntimeApiBaseUrl, getConfiguredApiBaseUrl, setRuntimeApiBaseUrl };
+export { clearRuntimeApiBaseUrl, getConfiguredApiBaseUrl, setRuntimeApiBaseUrl, warmupApiBaseUrl };
 export default api;

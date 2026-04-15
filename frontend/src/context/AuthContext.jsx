@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import api from "../api";
+import api, { warmupApiBaseUrl } from "../api";
 
 const AuthContext = createContext(null);
 
@@ -9,6 +9,7 @@ const AuthProvider = ({ children }) => {
 
   const fetchMe = async () => {
     try {
+      await warmupApiBaseUrl();
       const response = await api.get("/auth/me");
       setUser(response.data.user);
     } catch (error) {
@@ -29,6 +30,7 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    await warmupApiBaseUrl();
     const response = await api.post("/auth/login", { email, password });
     localStorage.setItem("token", response.data.token);
     setUser(response.data.user);
@@ -36,6 +38,7 @@ const AuthProvider = ({ children }) => {
   };
 
   const register = async (payload) => {
+    await warmupApiBaseUrl();
     const response = await api.post("/auth/register", payload);
     if (response.data.token) {
       localStorage.setItem("token", response.data.token);
