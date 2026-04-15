@@ -2,6 +2,42 @@ import { expect, test } from "@playwright/test";
 
 const ADMIN_KEY = process.env.ADMIN_REGISTRATION_KEY || "admin-secret-key";
 
+const MOBILE_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 360, height: 740 },
+  { width: 360, height: 800 },
+  { width: 375, height: 667 },
+  { width: 375, height: 812 },
+  { width: 390, height: 844 },
+  { width: 393, height: 852 },
+  { width: 412, height: 915 },
+  { width: 414, height: 896 },
+];
+
+const PUBLIC_ROUTES = [
+  {
+    path: "/login",
+    label: "login",
+    assertVisible: async (page) => {
+      await expect(page.locator("text=Sign In").first()).toBeVisible();
+    },
+  },
+  {
+    path: "/register",
+    label: "register",
+    assertVisible: async (page) => {
+      await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible();
+    },
+  },
+];
+
+const PROTECTED_ROUTES = [
+  { path: "/dashboard", label: "dashboard" },
+  { path: "/events", label: "events" },
+  { path: "/admin/users", label: "admin users" },
+];
+
 const assertNoHorizontalOverflow = async (page, contextLabel) => {
   const metrics = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -43,68 +79,31 @@ const openAsAuthenticated = async (page, request, path, viewport) => {
   await assertNoHorizontalOverflow(page, `${path} at ${viewport.width}x${viewport.height}`);
 };
 
-test("mobile case 1: login page 320x568", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 568 });
-  await page.goto("/#/login");
-  await expect(page.locator("text=Sign In").first()).toBeVisible();
-  await assertNoHorizontalOverflow(page, "login 320x568");
-});
+let caseNumber = 1;
 
-test("mobile case 2: login page 360x800", async ({ page }) => {
-  await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/#/login");
-  await expect(page.locator("text=Sign In").first()).toBeVisible();
-  await assertNoHorizontalOverflow(page, "login 360x800");
-});
+for (const route of PUBLIC_ROUTES) {
+  for (const viewport of MOBILE_VIEWPORTS) {
+    const label = `mobile case ${caseNumber}: ${route.label} ${viewport.width}x${viewport.height}`;
 
-test("mobile case 3: login page 390x844", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/#/login");
-  await expect(page.locator("text=Sign In").first()).toBeVisible();
-  await assertNoHorizontalOverflow(page, "login 390x844");
-});
+    test(label, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.goto(`/#${route.path}`);
+      await route.assertVisible(page);
+      await assertNoHorizontalOverflow(page, `${route.path} ${viewport.width}x${viewport.height}`);
+    });
 
-test("mobile case 4: register page 320x568", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 568 });
-  await page.goto("/#/register");
-  await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible();
-  await assertNoHorizontalOverflow(page, "register 320x568");
-});
+    caseNumber += 1;
+  }
+}
 
-test("mobile case 5: register page 360x800", async ({ page }) => {
-  await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/#/register");
-  await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible();
-  await assertNoHorizontalOverflow(page, "register 360x800");
-});
+for (const route of PROTECTED_ROUTES) {
+  for (const viewport of MOBILE_VIEWPORTS) {
+    const label = `mobile case ${caseNumber}: ${route.label} ${viewport.width}x${viewport.height}`;
 
-test("mobile case 6: register page 390x844", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/#/register");
-  await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible();
-  await assertNoHorizontalOverflow(page, "register 390x844");
-});
+    test(label, async ({ page, request }) => {
+      await openAsAuthenticated(page, request, route.path, viewport);
+    });
 
-test("mobile case 7: dashboard page 320x568", async ({ page, request }) => {
-  await openAsAuthenticated(page, request, "/dashboard", { width: 320, height: 568 });
-});
-
-test("mobile case 8: dashboard page 360x800", async ({ page, request }) => {
-  await openAsAuthenticated(page, request, "/dashboard", { width: 360, height: 800 });
-});
-
-test("mobile case 9: events page 320x568", async ({ page, request }) => {
-  await openAsAuthenticated(page, request, "/events", { width: 320, height: 568 });
-});
-
-test("mobile case 10: events page 390x844", async ({ page, request }) => {
-  await openAsAuthenticated(page, request, "/events", { width: 390, height: 844 });
-});
-
-test("mobile case 11: admin users page 320x568", async ({ page, request }) => {
-  await openAsAuthenticated(page, request, "/admin/users", { width: 320, height: 568 });
-});
-
-test("mobile case 12: admin users page 390x844", async ({ page, request }) => {
-  await openAsAuthenticated(page, request, "/admin/users", { width: 390, height: 844 });
-});
+    caseNumber += 1;
+  }
+}
