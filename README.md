@@ -45,6 +45,17 @@ Frontend runs at `http://localhost:5173`.
 
 ## Deployment
 
+### GitHub Auto Deploy (main branch)
+This repository includes GitHub Actions workflows that trigger deploy hooks on every push to `main`:
+- Frontend workflow: `.github/workflows/deploy-frontend.yml`
+- Backend workflow: `.github/workflows/deploy-backend.yml`
+
+Add these repository secrets in GitHub (**Settings -> Secrets and variables -> Actions**):
+- `VERCEL_DEPLOY_HOOK_URL` (from your Vercel project's Deploy Hooks)
+- `RAILWAY_DEPLOY_HOOK_URL` (from your Railway service Deploy Hook)
+
+Once secrets are set, pushes to `main` will automatically trigger both deployments when matching files change.
+
 ### Backend on Railway
 1. Push this project to GitHub.
 2. In Railway, create a new project from this repo.

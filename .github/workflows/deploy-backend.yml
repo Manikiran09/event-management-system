@@ -1,0 +1,36 @@
+name: Deploy Backend To Railway
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "backend/**"
+      - "railway.toml"
+      - "package.json"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger Railway deploy hook
+        env:
+          RAILWAY_DEPLOY_HOOK_URL: ${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RAILWAY_DEPLOY_HOOK_URL" ]; then
+            echo "Missing required secret: RAILWAY_DEPLOY_HOOK_URL"
+            exit 1
+          fi
+
+          curl --fail --show-error --silent \
+            --request POST \
+            "$RAILWAY_DEPLOY_HOOK_URL"
+
+          echo "Railway deploy hook triggered."
