@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 
 const allowedRoles = ["admin", "organizer", "participant"];
@@ -183,6 +184,50 @@ const deleteUserByAdmin = async (req, res) => {
   }
 };
 
+const deleteUsersByAdmin = async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: "userIds must be a non-empty array" });
+    }
+
+    const normalizedIds = [...new Set(
+      userIds
+        .filter((id) => typeof id === "string")
+        .map((id) => id.trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    )];
+
+    if (normalizedIds.length === 0) {
+      return res.status(400).json({ message: "No valid user IDs provided" });
+    }
+
+    const idsToDelete = normalizedIds.filter((id) => id !== req.user.userId);
+    const skippedSelfCount = normalizedIds.length - idsToDelete.length;
+
+    if (idsToDelete.length === 0) {
+      return res.status(400).json({ message: "You cannot delete your own account" });
+    }
+
+    const { deletedCount } = await User.deleteMany({ _id: { $in: idsToDelete } });
+
+    if (!deletedCount) {
+      return res.status(404).json({ message: "No users found to delete" });
+    }
+
+    return res.json({
+      message: skippedSelfCount
+        ? `${deletedCount} user(s) deleted. ${skippedSelfCount} skipped (your account).`
+        : `${deletedCount} user(s) deleted successfully`,
+      deletedCount,
+      skippedSelfCount,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete users", error: error.message });
+  }
+};
+
 const approveUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -323,6 +368,7 @@ export {
   createUserByAdmin,
   updateUserByAdmin,
   deleteUserByAdmin,
+  deleteUsersByAdmin,
   approveUser,
   rejectUser,
   pendingSignups,

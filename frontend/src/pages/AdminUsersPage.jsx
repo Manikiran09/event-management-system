@@ -18,6 +18,7 @@ const AdminUsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -31,6 +32,11 @@ const AdminUsersPage = () => {
 
       setUsers(usersResponse.data.users || []);
       setPendingUsers(pendingResponse.data.users || []);
+
+      setSelectedUserIds((prevSelectedIds) => {
+        const currentUserIds = new Set((usersResponse.data.users || []).map((user) => user.id));
+        return prevSelectedIds.filter((id) => currentUserIds.has(id));
+      });
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to fetch users");
     } finally {
@@ -103,11 +109,51 @@ const AdminUsersPage = () => {
     try {
       await api.delete(`/auth/users/${userId}`);
       setMessage("User deleted successfully");
+      setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
       await loadUsers();
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to delete user");
     }
   };
+
+  const toggleUserSelection = (userId) => {
+    setSelectedUserIds((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
+  };
+
+  const toggleSelectAllUsers = () => {
+    if (selectedUserIds.length === users.length) {
+      setSelectedUserIds([]);
+      return;
+    }
+
+    setSelectedUserIds(users.map((user) => user.id));
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedUserIds.length === 0) {
+      return;
+    }
+
+    if (!window.confirm(`Delete ${selectedUserIds.length} selected user(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await api.delete("/auth/users", {
+        data: { userIds: selectedUserIds },
+      });
+      setMessage(response.data?.message || "Selected users deleted successfully");
+      setSelectedUserIds([]);
+      await loadUsers();
+    } catch (apiError) {
+      setError(apiError.response?.data?.message || "Failed to delete selected users");
+    }
+  };
+
+  const allUsersSelected = users.length > 0 && selectedUserIds.length === users.length;
 
   const handleApprove = async (userId) => {
     setMessage("");
@@ -216,12 +262,46 @@ const AdminUsersPage = () => {
         <section className="mt-6 grid gap-6 xl:grid-cols-2">
           <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur-md md:p-6">
           <h2 className="font-display text-[1.65rem] font-bold tracking-tight text-slate-950">All Users</h2>
+          {!loading && users.length > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-3 text-sm">
+              <p className="text-slate-700">
+                <span className="font-semibold">{selectedUserIds.length}</span> selected
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                  onClick={toggleSelectAllUsers}
+                >
+                  {allUsersSelected ? "Clear Selection" : "Select All"}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-rose-600 to-rose-700 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={handleDeleteSelected}
+                  disabled={selectedUserIds.length === 0}
+                >
+                  Delete Selected
+                </button>
+              </div>
+            </div>
+          ) : null}
           {loading ? <p>Loading users...</p> : null}
           {!loading && users.length === 0 ? <p>No users found.</p> : null}
           {!loading && users.length > 0 ? (
             <div className="mt-4 space-y-4 md:hidden">
               {users.map((user) => (
                 <article key={user.id} className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-glow">
+                  <div className="mb-3">
+                    <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.includes(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                      />
+                      Select
+                    </label>
+                  </div>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="break-words font-semibold text-slate-950">{user.name}</p>
@@ -250,6 +330,14 @@ const AdminUsersPage = () => {
               <table className="hidden min-w-full border-collapse text-left text-sm text-slate-700 md:table">
                 <thead>
                   <tr className="bg-slate-950 text-white">
+                    <th className="px-4 py-3 align-top">
+                      <input
+                        type="checkbox"
+                        checked={allUsersSelected}
+                        onChange={toggleSelectAllUsers}
+                        aria-label="Select all users"
+                      />
+                    </th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
@@ -261,6 +349,14 @@ const AdminUsersPage = () => {
                 <tbody>
                   {users.map((user) => (
                     <tr key={user.id} className="border-t border-slate-200">
+                      <td className="px-4 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(user.id)}
+                          onChange={() => toggleUserSelection(user.id)}
+                          aria-label={`Select ${user.name}`}
+                        />
+                      </td>
                       <td className="px-4 py-3 align-top">{user.name}</td>
                       <td className="px-4 py-3 align-top">{user.email}</td>
                       <td className="px-4 py-3 align-top">{user.role}</td>

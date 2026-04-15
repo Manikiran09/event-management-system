@@ -7,6 +7,7 @@ import {
 	createUserByAdmin,
 	updateUserByAdmin,
 	deleteUserByAdmin,
+	deleteUsersByAdmin,
 	approveUser,
 	rejectUser,
 	pendingSignups,
@@ -20,6 +21,7 @@ router.post("/login", login);
 router.get("/me", authRequired, me);
 router.get("/users", authRequired, allowRoles("admin"), listUsers);
 router.post("/users", authRequired, allowRoles("admin"), createUserByAdmin);
+router.delete("/users", authRequired, allowRoles("admin"), deleteUsersByAdmin);
 router.get("/users/pending", authRequired, allowRoles("admin"), pendingSignups);
 router.patch("/users/:userId", authRequired, allowRoles("admin"), updateUserByAdmin);
 router.delete("/users/:userId", authRequired, allowRoles("admin"), deleteUserByAdmin);
