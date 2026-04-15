@@ -48,6 +48,38 @@ const normalizeOrigin = (origin) => {
   }
 };
 
+const isPrivateIpv4Host = (host) => {
+  const parts = host.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
+    return false;
+  }
+
+  if (parts[0] === 10) {
+    return true;
+  }
+
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) {
+    return true;
+  }
+
+  return parts[0] === 192 && parts[1] === 168;
+};
+
+const isLocalNetworkOrigin = (origin) => {
+  try {
+    const parsed = new URL(origin);
+    const host = (parsed.hostname || "").toLowerCase();
+
+    if (host === "localhost" || host === "127.0.0.1") {
+      return true;
+    }
+
+    return isPrivateIpv4Host(host);
+  } catch {
+    return false;
+  }
+};
+
 const wildcardToRegex = (pattern) => {
   const escaped = pattern
     .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
@@ -87,6 +119,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const isOriginAllowed = (origin) => {
+  if (process.env.NODE_ENV !== "production" && isLocalNetworkOrigin(origin)) {
+    return true;
+  }
+
   if (exactAllowedOrigins.length === 0 && wildcardAllowedOriginPatterns.length === 0) {
     return true;
   }
@@ -113,7 +149,9 @@ app.use(
         return;
       }
 
-      callback(new Error("Not allowed by CORS"));
+      const corsError = new Error("Not allowed by CORS");
+      corsError.status = 403;
+      callback(corsError);
     },
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -151,6 +189,28 @@ app.get(
     res.json({ message: "Participant dashboard data" });
   }
 );
+
+app.use((req, res) => {
+  res.status(404).json({
+    status: "error",
+    message: `Route not found: ${req.method} ${req.originalUrl || req.url || "/"}`,
+  });
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  const status = Number(error?.status || error?.statusCode || 500);
+  const message = error?.message || "Internal server error";
+
+  res.status(status).json({
+    status: "error",
+    message,
+  });
+});
 
 const PORT = process.env.PORT || 5112;
 const DB_RETRY_DELAY_MS = 5000;
