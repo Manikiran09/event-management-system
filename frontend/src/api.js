@@ -3,10 +3,7 @@ import axios from "axios";
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
 let sessionApiBaseUrl = "";
 let warmupPromise = null;
-const productionApiCandidates = [
-  import.meta.env.VITE_API_BASE_URL || "",
-  "https://event-management-system-production-f464.up.railway.app/api",
-];
+const defaultProductionApiBaseUrl = "https://event-management-system-production-f464.up.railway.app/api";
 
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {
@@ -24,6 +21,15 @@ const normalizeApiBaseUrl = (value) => {
 
   return `${trimmed}/api`;
 };
+
+const isAbsoluteHttpUrl = (value) => /^https?:\/\//i.test(value || "");
+
+const productionApiCandidates = [
+  import.meta.env.VITE_API_BASE_URL || "",
+  defaultProductionApiBaseUrl,
+]
+  .map((value) => normalizeApiBaseUrl(value))
+  .filter((value) => isAbsoluteHttpUrl(value));
 
 const getRuntimeApiBaseUrl = () => {
   if (typeof window === "undefined") {
@@ -100,7 +106,11 @@ const canReachApiBaseUrl = async (baseUrl) => {
       headers: { "Cache-Control": "no-cache" },
     });
 
-    return response.status >= 200 && response.status < 500;
+    const contentType = String(response.headers?.["content-type"] || "").toLowerCase();
+    const isJson = contentType.includes("application/json");
+    const hasHealthShape = typeof response.data === "object" && response.data !== null && "status" in response.data;
+
+    return response.status >= 200 && response.status < 500 && isJson && hasHealthShape;
   } catch {
     return false;
   }
