@@ -139,17 +139,7 @@ const createEvent = async (req, res) => {
 
 const listEvents = async (req, res) => {
   try {
-    const filter = {};
-
-    if (req.user.role === "organizer") {
-      filter.createdBy = req.user.userId;
-    }
-
-    if (req.user.role === "participant") {
-      filter.date = { $gte: new Date() };
-    }
-
-    const events = await Event.find(filter)
+    const events = await Event.find({})
       .populate("createdBy", "name email role")
       .sort({ date: 1 })
       .lean();
