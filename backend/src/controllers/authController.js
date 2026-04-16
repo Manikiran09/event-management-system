@@ -334,6 +334,76 @@ const me = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hasNameUpdate = name !== undefined;
+    const hasEmailUpdate = email !== undefined;
+    const hasPasswordUpdate = Boolean(newPassword);
+
+    if (!hasNameUpdate && !hasEmailUpdate && !hasPasswordUpdate) {
+      return res.status(400).json({ message: "No profile changes provided" });
+    }
+
+    if (hasNameUpdate) {
+      if (typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ message: "Name must be at least 2 characters" });
+      }
+      user.name = name.trim();
+    }
+
+    if (hasEmailUpdate) {
+      const normalizedEmail = normalizeEmail(email);
+      if (!normalizedEmail) {
+        return res.status(400).json({ message: "Valid email is required" });
+      }
+
+      const existingUser = await User.findOne({
+        email: normalizedEmail,
+        _id: { $ne: user._id },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      user.email = normalizedEmail;
+    }
+
+    if (hasPasswordUpdate) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: "Current password is required to set a new password" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+
+    return res.json({
+      message: "Profile updated successfully",
+      user: serializeUser(user),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update profile", error: error.message });
+  }
+};
+
 const listUsers = async (req, res) => {
   try {
     const users = await User.find()
@@ -364,6 +434,7 @@ export {
   register,
   login,
   me,
+  updateProfile,
   listUsers,
   createUserByAdmin,
   updateUserByAdmin,

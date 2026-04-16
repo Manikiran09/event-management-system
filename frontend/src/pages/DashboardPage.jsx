@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
-import { ArrowRightIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, ShieldIcon, IconShell } from "../components/Icons";
+import { ArrowRightIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, ShieldIcon, IconShell, ProfileIcon } from "../components/Icons";
 
 const roleDescriptions = {
   admin: "You have full control over users and events across the platform.",
@@ -79,12 +79,18 @@ const DashboardPage = () => {
               <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-slate-950">Your current access</h2>
               <p className="mt-4 text-sm leading-6 text-slate-600">{overview || "Loading..."}</p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Link className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/10 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-900/15" to="/events">
                   <span className="inline-flex items-center gap-2">
                     <TicketIcon className="h-4 w-4" />
                     Browse Events
                     <ArrowRightIcon className="h-4 w-4" />
+                  </span>
+                </Link>
+                <Link className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-white" to="/profile">
+                  <span className="inline-flex items-center gap-2">
+                    <ProfileIcon className="h-4 w-4" />
+                    Profile
                   </span>
                 </Link>
                 {user?.role === "participant" ? (

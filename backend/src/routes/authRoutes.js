@@ -3,6 +3,7 @@ import {
 	login,
 	register,
 	me,
+	updateProfile,
 	listUsers,
 	createUserByAdmin,
 	updateUserByAdmin,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.get("/me", authRequired, me);
+router.patch("/profile", authRequired, updateProfile);
 router.get("/users", authRequired, allowRoles("admin"), listUsers);
 router.post("/users", authRequired, allowRoles("admin"), createUserByAdmin);
 router.delete("/users", authRequired, allowRoles("admin"), deleteUsersByAdmin);

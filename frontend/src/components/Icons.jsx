@@ -41,4 +41,11 @@ const ShieldIcon = ({ className = "h-5 w-5" }) => (
   </svg>
 );
 
-export { IconShell, DashboardIcon, EventsIcon, UsersIcon, TicketIcon, ArrowRightIcon, ShieldIcon };
+const ProfileIcon = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export { IconShell, DashboardIcon, EventsIcon, UsersIcon, TicketIcon, ArrowRightIcon, ShieldIcon, ProfileIcon };

@@ -6,6 +6,7 @@ import EventsPage from "./pages/EventsPage";
 import LoginPage from "./pages/LoginPage";
 import MyRegistrationsPage from "./pages/MyRegistrationsPage";
 import PhoneSetupPage from "./pages/PhoneSetupPage";
+import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 import { useAuth } from "./context/AuthContext";
 
@@ -38,6 +39,14 @@ const App = () => {
         element={
           <ProtectedRoute roles={["participant"]}>
             <MyRegistrationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute roles={["admin", "organizer", "participant"]}>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />
