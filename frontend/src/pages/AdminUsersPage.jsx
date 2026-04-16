@@ -183,7 +183,7 @@ const AdminUsersPage = () => {
   };
 
   return (
-    <main className="min-h-[100dvh]">
+    <main className="flex min-h-[100dvh] flex-col">
       <TopNav />
       <section className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-4 md:px-6 md:py-8">
         <div className="mb-8 flex flex-col gap-3">

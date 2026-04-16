@@ -4,7 +4,7 @@ const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-10 border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
+    <footer className="mt-auto border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-3 py-6 sm:px-4 md:flex-row md:items-center md:justify-between md:px-6">
         <div>
           <p className="font-display text-lg font-bold tracking-tight text-slate-950">EventHub</p>

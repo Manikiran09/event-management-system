@@ -346,7 +346,7 @@ const EventsPage = () => {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="flex min-h-screen flex-col">
       <TopNav />
       <section className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
