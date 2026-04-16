@@ -2,10 +2,34 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ArrowRightIcon, DashboardIcon, EventsIcon, ProfileIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
 
+const formatRole = (role) => {
+  if (!role) {
+    return "User";
+  }
+
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+const formatAccountStatus = (status) => {
+  if (!status) {
+    return "Approved";
+  }
+
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 const TopNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const initials = (user?.name || "U")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   const linkClass = (path) =>
     `rounded-full px-4 py-1.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white ${
@@ -65,9 +89,19 @@ const TopNav = () => {
           </nav>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80 backdrop-blur sm:text-xs">
-            {user?.name} • {user?.role}
-          </span>
+          <div className="inline-flex max-w-[18rem] items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-black tracking-wide text-white">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight text-white">{user?.name || "User"}</p>
+              <p className="truncate text-[11px] font-medium text-white/65">{user?.email || "No email available"}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em]">
+                <span className="rounded-full bg-white/10 px-2 py-1 text-white/75">{formatRole(user?.role)}</span>
+                <span className="rounded-full bg-teal-500/20 px-2 py-1 text-teal-100">{formatAccountStatus(user?.accountStatus)}</span>
+              </div>
+            </div>
+          </div>
           <button type="button" className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 sm:w-auto" onClick={handleLogout}>
             <span className="inline-flex items-center gap-2">
               Logout

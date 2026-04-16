@@ -3,6 +3,20 @@ import api from "../api";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
 
+const formatDate = (value) => {
+  if (!value) {
+    return "Not available";
+  }
+
+  return new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const ProfilePage = () => {
   const { user, fetchMe } = useAuth();
   const [form, setForm] = useState({
@@ -84,15 +98,27 @@ const ProfilePage = () => {
             <h2 className="mt-5 font-display text-2xl font-bold tracking-tight">{user?.name || "User"}</h2>
             <p className="mt-2 text-sm text-slate-300">{user?.email}</p>
 
-            <div className="mt-6 space-y-3 text-sm">
-              <p>
-                <span className="text-slate-400">Role:</span>{" "}
-                <span className="font-semibold text-white">{roleLabel}</span>
-              </p>
-              <p>
-                <span className="text-slate-400">Account Status:</span>{" "}
-                <span className="font-semibold text-white">{user?.accountStatus || "approved"}</span>
-              </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Role</p>
+                <p className="mt-1 text-sm font-semibold text-white">{roleLabel}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Account Status</p>
+                <p className="mt-1 text-sm font-semibold text-white">{user?.accountStatus || "approved"}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Member Since</p>
+                <p className="mt-1 text-sm font-semibold text-white">{formatDate(user?.createdAt)}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Last Updated</p>
+                <p className="mt-1 text-sm font-semibold text-white">{formatDate(user?.updatedAt)}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:col-span-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Account ID</p>
+                <p className="mt-1 break-all text-sm font-semibold text-white">{user?.id || "Not available"}</p>
+              </div>
             </div>
           </article>
 
