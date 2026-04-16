@@ -89,7 +89,11 @@ const TopNav = () => {
           </nav>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end">
-          <div className="inline-flex max-w-[18rem] items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm">
+          <Link
+            to="/profile"
+            className="inline-flex max-w-[18rem] items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+            aria-label="Open profile"
+          >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-black tracking-wide text-white">
               {initials}
             </div>
@@ -101,7 +105,7 @@ const TopNav = () => {
                 <span className="rounded-full bg-teal-500/20 px-2 py-1 text-teal-100">{formatAccountStatus(user?.accountStatus)}</span>
               </div>
             </div>
-          </div>
+          </Link>
           <button type="button" className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 sm:w-auto" onClick={handleLogout}>
             <span className="inline-flex items-center gap-2">
               Logout
