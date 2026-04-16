@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
+import Footer from "../components/Footer";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
 import { ArrowRightIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, ShieldIcon, IconShell, ProfileIcon } from "../components/Icons";
@@ -120,6 +121,7 @@ const DashboardPage = () => {
           </div>
         </section>
       </section>
+      <Footer />
     </main>
   );
 };

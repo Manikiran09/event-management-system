@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import Footer from "../components/Footer";
 import TopNav from "../components/TopNav";
 
 const initialForm = {
@@ -454,6 +455,7 @@ const AdminUsersPage = () => {
           </section>
         </section>
       </section>
+      <Footer />
     </main>
   );
 };

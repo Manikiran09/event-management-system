@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import Footer from "../components/Footer";
 import TopNav from "../components/TopNav";
 
 const MyRegistrationsPage = () => {
@@ -71,6 +72,7 @@ const MyRegistrationsPage = () => {
           ))}
         </section>
       </section>
+      <Footer />
     </main>
   );
 };

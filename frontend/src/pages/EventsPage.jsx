@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
+import Footer from "../components/Footer";
 import LocationPickerMap from "../components/LocationPickerMap";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
@@ -614,6 +615,7 @@ const EventsPage = () => {
           </div>
         ) : null}
       </section>
+      <Footer />
     </main>
   );
 };

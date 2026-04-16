@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ArrowRightIcon, DashboardIcon, EventsIcon, ProfileIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
+import { ArrowRightIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
 
 const formatRole = (role) => {
   if (!role) {
@@ -62,12 +62,6 @@ const TopNav = () => {
               <span className="inline-flex items-center gap-2">
                 <EventsIcon className="h-4 w-4" />
                 Events
-              </span>
-            </Link>
-            <Link className={linkClass("/profile")} to="/profile">
-              <span className="inline-flex items-center gap-2">
-                <ProfileIcon className="h-4 w-4" />
-                Profile
               </span>
             </Link>
             {user?.role === "admin" ? (

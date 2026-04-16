@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import api from "../api";
+import Footer from "../components/Footer";
 import TopNav from "../components/TopNav";
 import { useAuth } from "../context/AuthContext";
 
@@ -175,6 +176,7 @@ const ProfilePage = () => {
           </section>
         </section>
       </section>
+      <Footer />
     </main>
   );
 };
