@@ -40,6 +40,10 @@ const PROTECTED_ROUTES = [
   { path: "/admin/users", label: "admin users" },
 ];
 
+const TEST_ADMIN_NAME = "Mobile Smoke Admin";
+const TEST_ADMIN_EMAIL = process.env.PLAYWRIGHT_TEST_ADMIN_EMAIL || "mobile-smoke-admin@example.com";
+const TEST_ADMIN_PASSWORD = process.env.PLAYWRIGHT_TEST_ADMIN_PASSWORD || "TestPass123!";
+
 let isBackendAvailable = false;
 
 test.beforeAll(async ({ request }) => {
@@ -65,15 +69,24 @@ const assertNoHorizontalOverflow = async (page, contextLabel) => {
 };
 
 const createAdminToken = async (request) => {
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-  const email = `mobile-admin-${suffix}@example.com`;
-  const password = "TestPass123!";
+  const login = await request.post(`${API_BASE_URL}/auth/login`, {
+    data: {
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
+    },
+  });
+
+  if (login.ok()) {
+    const body = await login.json();
+    expect(body.token).toBeTruthy();
+    return body.token;
+  }
 
   const register = await request.post(`${API_BASE_URL}/auth/register`, {
     data: {
-      name: `Mobile Admin ${suffix}`,
-      email,
-      password,
+      name: TEST_ADMIN_NAME,
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
       role: "admin",
       adminKey: ADMIN_KEY,
     },
