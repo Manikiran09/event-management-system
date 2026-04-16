@@ -108,14 +108,7 @@ const DashboardPage = () => {
                       User Controls
                     </span>
                   </Link>
-                ) : (
-                  <span className="inline-flex cursor-default items-center justify-center rounded-2xl border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-800">
-                    <span className="inline-flex items-center gap-2">
-                      <EventsIcon className="h-4 w-4" />
-                      Organizer Tools
-                    </span>
-                  </span>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
