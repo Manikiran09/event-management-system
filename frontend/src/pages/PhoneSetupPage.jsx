@@ -94,7 +94,7 @@ const PhoneSetupPage = () => {
           className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15"
           value={apiUrlInput}
           onChange={(event) => setApiUrlInput(event.target.value)}
-          placeholder="https://angelic-laughter-production-163d.up.railway.app"
+          placeholder="https://event-management-system-production-4de7.up.railway.app"
         />
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">

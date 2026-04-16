@@ -84,7 +84,7 @@ Notes:
 
 `frontend/vercel.json` is included to ensure SPA routing works with direct/deep links.
 
-If `VITE_API_BASE_URL` is not set, the frontend will automatically try `https://angelic-laughter-production-163d.up.railway.app/api` before showing the **Set API URL** action on the login screen.
+If `VITE_API_BASE_URL` is not set, the frontend will automatically try `https://event-management-system-production-4de7.up.railway.app/api` before showing the **Set API URL** action on the login screen.
 Use the manual override only if you intentionally point to a different backend.
 
 ## Main API Endpoints
