@@ -479,7 +479,7 @@ const EventsPage = () => {
             const isRegistered = registeredEventIds.has(event._id);
             const canRegister = user?.role === "participant" && !isRegistered && event.availableSeats > 0;
             const currentUserId = getEntityId(user?.id || user?._id);
-            const eventOwnerId = getEntityId(event.createdBy);
+            const eventOwnerId = getEntityId(event.createdById || event.createdBy);
             const canManage =
               (user?.role === "admin" || user?.role === "organizer") &&
               (user?.role === "admin" || eventOwnerId === currentUserId);

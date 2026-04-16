@@ -173,11 +173,23 @@ const listEvents = async (req, res) => {
 
     const countMap = new Map(counts.map((item) => [item._id.toString(), item.count]));
 
-    const data = events.map((event) => ({
-      ...event,
-      registeredCount: countMap.get(event._id.toString()) || 0,
-      availableSeats: Math.max(event.capacity - (countMap.get(event._id.toString()) || 0), 0),
-    }));
+    const data = events.map((event) => {
+      const createdById = normalizeId(event.createdBy);
+
+      return {
+        ...event,
+        createdById,
+        createdBy:
+          event.createdBy && typeof event.createdBy === "object"
+            ? {
+              ...event.createdBy,
+              id: createdById,
+            }
+            : event.createdBy,
+        registeredCount: countMap.get(event._id.toString()) || 0,
+        availableSeats: Math.max(event.capacity - (countMap.get(event._id.toString()) || 0), 0),
+      };
+    });
 
     return res.json({ events: data });
   } catch (error) {
