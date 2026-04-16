@@ -90,6 +90,22 @@ const createInitialPaymentForm = (method = "debit") => ({
   cvv: "",
 });
 
+const getEntityId = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "object") {
+    return String(value._id || value.id || "");
+  }
+
+  return String(value);
+};
+
 const EventsPage = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
@@ -462,9 +478,11 @@ const EventsPage = () => {
           {events.map((event) => {
             const isRegistered = registeredEventIds.has(event._id);
             const canRegister = user?.role === "participant" && !isRegistered && event.availableSeats > 0;
+            const currentUserId = getEntityId(user?.id || user?._id);
+            const eventOwnerId = getEntityId(event.createdBy);
             const canManage =
               (user?.role === "admin" || user?.role === "organizer") &&
-              (user?.role === "admin" || event.createdBy?._id === user?.id);
+              (user?.role === "admin" || eventOwnerId === currentUserId);
 
             return (
               <article key={event._id} className="flex h-full flex-col justify-between rounded-3xl border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur-md md:p-6">

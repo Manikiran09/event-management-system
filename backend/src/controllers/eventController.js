@@ -72,6 +72,22 @@ const normalizePaymentMethods = (paymentMethods) => {
     .filter((item) => allowed.has(item));
 };
 
+const normalizeId = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "object") {
+    return String(value._id || value.id || "");
+  }
+
+  return String(value);
+};
+
 const createEvent = async (req, res) => {
   try {
     const {
@@ -183,7 +199,7 @@ const updateEvent = async (req, res) => {
     }
 
     const canManage =
-      req.user.role === "admin" || event.createdBy.toString() === req.user.userId;
+      req.user.role === "admin" || normalizeId(event.createdBy) === normalizeId(req.user.userId);
 
     if (!canManage) {
       return res.status(403).json({ message: "Not allowed to update this event" });
@@ -276,7 +292,7 @@ const deleteEvent = async (req, res) => {
     }
 
     const canManage =
-      req.user.role === "admin" || event.createdBy.toString() === req.user.userId;
+      req.user.role === "admin" || normalizeId(event.createdBy) === normalizeId(req.user.userId);
 
     if (!canManage) {
       return res.status(403).json({ message: "Not allowed to delete this event" });
