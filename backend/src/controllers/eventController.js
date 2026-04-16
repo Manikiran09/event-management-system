@@ -210,8 +210,7 @@ const updateEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    const canManage =
-      req.user.role === "admin" || normalizeId(event.createdBy) === normalizeId(req.user.userId);
+    const canManage = req.user.role === "admin" || req.user.role === "organizer";
 
     if (!canManage) {
       return res.status(403).json({ message: "Not allowed to update this event" });
@@ -303,8 +302,7 @@ const deleteEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    const canManage =
-      req.user.role === "admin" || normalizeId(event.createdBy) === normalizeId(req.user.userId);
+    const canManage = req.user.role === "admin" || req.user.role === "organizer";
 
     if (!canManage) {
       return res.status(403).json({ message: "Not allowed to delete this event" });

@@ -478,11 +478,7 @@ const EventsPage = () => {
           {events.map((event) => {
             const isRegistered = registeredEventIds.has(event._id);
             const canRegister = user?.role === "participant" && !isRegistered && event.availableSeats > 0;
-            const currentUserId = getEntityId(user?.id || user?._id);
-            const eventOwnerId = getEntityId(event.createdById || event.createdBy);
-            const canManage =
-              (user?.role === "admin" || user?.role === "organizer") &&
-              (user?.role === "admin" || eventOwnerId === currentUserId);
+            const canManage = user?.role === "admin" || user?.role === "organizer";
 
             return (
               <article key={event._id} className="flex h-full flex-col justify-between rounded-3xl border border-white/70 bg-white/80 p-5 shadow-glow backdrop-blur-md md:p-6">
