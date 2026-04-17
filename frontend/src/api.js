@@ -3,7 +3,7 @@ import axios from "axios";
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
 let sessionApiBaseUrl = "";
 let warmupPromise = null;
-const defaultProductionApiBaseUrl = "https://event-management-system-production-ddcc.up.railway.app/api";
+const defaultProductionApiBaseUrl = "";
 
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {

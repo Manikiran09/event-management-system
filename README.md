@@ -82,9 +82,9 @@ Notes:
 	- `VITE_API_BASE_URL=https://your-service.up.railway.app/api`
 5. Deploy.
 
-`frontend/vercel.json` is included to ensure SPA routing works with direct/deep links.
+`frontend/vercel.json` is included to ensure SPA routing works with direct/deep links and to proxy `/api/*` requests to Railway from Vercel server-side.
 
-If `VITE_API_BASE_URL` is not set, the frontend tries `https://event-management-system-production-ddcc.up.railway.app/api`, then local/proxy candidates, and then prompts for a manual API URL on the login screen.
+If `VITE_API_BASE_URL` is not set, the frontend uses same-origin `/api` first (recommended with Vercel rewrite proxy), then local/proxy candidates, and then prompts for a manual API URL on the login screen.
 Use the manual override only when you intentionally want a different backend target.
 
 ## Main API Endpoints
