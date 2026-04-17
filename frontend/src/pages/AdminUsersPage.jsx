@@ -33,9 +33,11 @@ const AdminUsersPage = () => {
   const [error, setError] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState([]);
 
-  const loadUsers = async () => {
-    setLoading(true);
-    setError("");
+  const loadUsers = async ({ background = false } = {}) => {
+    if (!background) {
+      setLoading(true);
+      setError("");
+    }
 
     try {
       const [usersResponse, pendingResponse] = await Promise.all([
@@ -51,15 +53,27 @@ const AdminUsersPage = () => {
         return prevSelectedIds.filter((id) => currentUserIds.has(id));
       });
     } catch (apiError) {
-      setError(apiError.response?.data?.message || "Failed to fetch users");
+      if (!background) {
+        setError(apiError.response?.data?.message || "Failed to fetch users");
+      }
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    loadUsers({ background: false });
+
+    const intervalId = setInterval(() => {
+      if (!editingUserId) {
+        loadUsers({ background: true });
+      }
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [editingUserId]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

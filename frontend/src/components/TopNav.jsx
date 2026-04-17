@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import api from "../api";
 import { useAuth } from "../context/AuthContext";
-import { ArrowRightIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
+import { ArrowRightIcon, BellIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
 
 const formatRole = (role) => {
   if (!role) {
@@ -22,6 +24,38 @@ const TopNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (user?.role !== "admin") {
+      setPendingCount(0);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadPendingCount = async () => {
+      try {
+        const response = await api.get("/auth/users/pending");
+        if (!isMounted) {
+          return;
+        }
+        setPendingCount((response.data?.users || []).length);
+      } catch {
+        if (isMounted) {
+          setPendingCount(0);
+        }
+      }
+    };
+
+    loadPendingCount();
+    const intervalId = setInterval(loadPendingCount, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [user?.role]);
 
   const initials = (user?.name || "U")
     .split(" ")
@@ -83,6 +117,19 @@ const TopNav = () => {
           </nav>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end">
+          {user?.role === "admin" ? (
+            <Link
+              to="/admin/users"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white/85 transition hover:bg-white/15 hover:text-white"
+              aria-label="Pending signup notifications"
+              title={`Pending signups: ${pendingCount}`}
+            >
+              <BellIcon className="h-5 w-5" />
+              <span className={`absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${pendingCount > 0 ? "bg-rose-500 text-white" : "bg-white/25 text-white/80"}`}>
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            </Link>
+          ) : null}
           <Link
             to="/profile"
             className="inline-flex max-w-[18rem] items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"

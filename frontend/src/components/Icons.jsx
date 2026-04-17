@@ -48,4 +48,11 @@ const ProfileIcon = ({ className = "h-5 w-5" }) => (
   </svg>
 );
 
-export { IconShell, DashboardIcon, EventsIcon, UsersIcon, TicketIcon, ArrowRightIcon, ShieldIcon, ProfileIcon };
+const BellIcon = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <path d="M8.5 10a3.5 3.5 0 1 1 7 0v2.25c0 .7.27 1.38.75 1.88l.75.77H7l.75-.77c.48-.5.75-1.18.75-1.88V10Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M10.2 18.5a1.8 1.8 0 0 0 3.6 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
+export { IconShell, DashboardIcon, EventsIcon, UsersIcon, TicketIcon, ArrowRightIcon, ShieldIcon, ProfileIcon, BellIcon };
