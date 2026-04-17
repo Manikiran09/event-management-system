@@ -354,6 +354,12 @@ const me = async (req, res) => {
       return res.status(403).json({ message: "Your account was rejected by admin" });
     }
 
+    if (user.sessionStatus !== "active") {
+      user.sessionStatus = "active";
+    }
+    user.lastSeenAt = new Date();
+    await user.save();
+
     return res.json({ user: serializeUser(user) });
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch user", error: error.message });
