@@ -5,7 +5,7 @@ const Footer = () => {
 
   return (
     <footer className="mt-auto border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-3 py-6 sm:px-4 md:flex-row md:items-center md:justify-between md:px-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-3 py-6 sm:px-4 md:flex-row md:items-center md:justify-between md:gap-4 md:px-6 md:py-5">
         <div>
           <p className="font-display text-lg font-bold tracking-tight text-slate-950">EventHub</p>
           <p className="mt-1 max-w-lg text-sm leading-6 text-slate-600">
