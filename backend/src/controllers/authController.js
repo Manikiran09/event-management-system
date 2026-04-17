@@ -7,6 +7,11 @@ const allowedRoles = ["admin", "organizer", "participant"];
 
 const normalizeEmail = (email = "") => email.trim().toLowerCase();
 
+const resolveJwtExpiry = () => {
+  const configured = (process.env.JWT_EXPIRES_IN || "").trim();
+  return configured || "90d";
+};
+
 const serializeUser = (user) => ({
   id: user._id,
   name: user.name,
@@ -26,7 +31,7 @@ const createToken = (user) => {
       accountStatus: user.accountStatus,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+    { expiresIn: resolveJwtExpiry() }
   );
 };
 

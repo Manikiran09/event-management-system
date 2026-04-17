@@ -64,7 +64,7 @@ Once secrets are set, pushes to `main` will automatically trigger both deploymen
 	- `MONGO_URI=your-mongodb-connection-string`
 	- `MONGO_DB_NAME=event_management`
 	- `JWT_SECRET=your-strong-secret`
-	- `JWT_EXPIRES_IN=1d`
+	- `JWT_EXPIRES_IN=90d`
 	- `ADMIN_REGISTRATION_KEY=your-admin-registration-key`
 	- `FRONTEND_URL=https://your-vercel-app.vercel.app`
 5. Deploy and copy your Railway backend URL:
