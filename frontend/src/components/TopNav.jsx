@@ -121,7 +121,7 @@ const TopNav = () => {
     .toUpperCase();
 
   const linkClass = (path) =>
-    `shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white ${
+    `shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/10 hover:text-white md:px-4 md:text-sm ${
       location.pathname === path ? "bg-white/10 text-white" : ""
     }`;
 
@@ -132,15 +132,15 @@ const TopNav = () => {
 
   return (
     <header className="sticky top-0 z-50 overflow-visible border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 md:flex-row md:items-center md:justify-between md:gap-4 md:px-6">
-        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:items-center">
-          <Link to="/dashboard" className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2 text-sm font-bold tracking-tight text-white sm:px-4 sm:text-base md:text-lg">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-3 py-2 sm:px-4 md:flex-row md:items-center md:justify-between md:gap-4 md:px-6 md:py-3">
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center md:gap-3">
+          <Link to="/dashboard" className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm font-bold tracking-tight text-white sm:px-4 sm:text-base md:text-lg">
             <IconShell className="bg-teal-500/20 text-teal-200">
               <span className="text-sm font-black">E</span>
             </IconShell>
             EventHub
           </Link>
-          <nav className="-mx-1 flex w-full max-w-full gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
+          <nav className="-mx-1 flex w-full max-w-full gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-wrap md:gap-2 md:overflow-visible md:px-0 md:pb-0">
             <Link className={linkClass("/dashboard")} to="/dashboard">
               <span className="inline-flex items-center gap-2">
                 <DashboardIcon className="h-4 w-4" />
@@ -171,11 +171,11 @@ const TopNav = () => {
             ) : null}
           </nav>
         </div>
-        <div className="grid w-full grid-cols-[auto_1fr] items-start gap-3 md:flex md:w-auto md:flex-nowrap md:items-center md:justify-end">
+        <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 md:flex md:w-auto md:flex-nowrap md:items-center md:justify-end md:gap-3">
           <div className="relative" ref={notificationContainerRef}>
             <button
               type="button"
-              className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white/85 transition hover:bg-white/15 hover:text-white"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white/85 transition hover:bg-white/15 hover:text-white md:h-11 md:w-11"
               aria-label="Open activity notifications"
               title={`Notifications: ${notificationCount}`}
               onClick={handleNotificationsToggle}
@@ -187,7 +187,7 @@ const TopNav = () => {
             </button>
 
             {isNotificationOpen ? (
-              <div className="fixed left-3 right-3 top-28 z-[120] max-h-[70dvh] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-80 md:max-w-[90vw] md:max-h-none">
+              <div className="fixed left-3 right-3 top-24 z-[120] max-h-[70dvh] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-80 md:max-w-[90vw] md:max-h-none">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <p className="text-sm font-semibold">Activity Notifications</p>
                   <button
@@ -218,22 +218,22 @@ const TopNav = () => {
           </div>
           <Link
             to="/profile"
-            className="inline-flex w-full min-w-0 items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 md:max-w-[18rem]"
+            className="inline-flex w-full min-w-0 items-center gap-2 rounded-3xl border border-white/10 bg-white/10 px-2.5 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 md:max-w-[18rem] md:gap-3 md:px-3"
             aria-label="Open profile"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-black tracking-wide text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-black tracking-wide text-white md:h-10 md:w-10">
               {initials}
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-tight text-white">{user?.name || "User"}</p>
-              <p className="truncate text-[11px] font-medium text-white/65">{user?.email || "No email available"}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em]">
+              <p className="hidden truncate text-[11px] font-medium text-white/65 sm:block">{user?.email || "No email available"}</p>
+              <div className="mt-1 hidden flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] sm:flex">
                 <span className="rounded-full bg-white/10 px-2 py-1 text-white/75">{formatRole(user?.role)}</span>
                 <span className="rounded-full bg-teal-500/20 px-2 py-1 text-teal-100">{formatAccountStatus(user?.accountStatus)}</span>
               </div>
             </div>
           </Link>
-          <button type="button" className="col-span-2 inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 md:col-span-1 md:w-auto" onClick={handleLogout}>
+          <button type="button" className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15 md:h-auto md:w-auto md:px-4 md:py-2.5 md:text-sm" onClick={handleLogout}>
             <span className="inline-flex items-center gap-2">
               Logout
               <ArrowRightIcon className="h-4 w-4 rotate-180" />
