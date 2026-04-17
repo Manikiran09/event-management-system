@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   appNotificationsChangeEventName,
@@ -59,6 +59,7 @@ const TopNav = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const notificationContainerRef = useRef(null);
 
   useEffect(() => {
     const syncNotifications = () => {
@@ -81,6 +82,21 @@ const TopNav = () => {
   useEffect(() => {
     setIsNotificationOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!notificationContainerRef.current) {
+        return;
+      }
+
+      if (!notificationContainerRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
+      }
+    };
+
+    window.addEventListener("click", handleOutsideClick);
+    return () => window.removeEventListener("click", handleOutsideClick);
+  }, []);
 
   const handleNotificationsToggle = () => {
     if (!isNotificationOpen) {
@@ -105,7 +121,7 @@ const TopNav = () => {
     .toUpperCase();
 
   const linkClass = (path) =>
-    `rounded-full px-4 py-1.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white ${
+    `shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white ${
       location.pathname === path ? "bg-white/10 text-white" : ""
     }`;
 
@@ -117,7 +133,7 @@ const TopNav = () => {
   return (
     <header className="sticky top-0 z-50 overflow-visible border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:items-center">
           <Link to="/dashboard" className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2 text-sm font-bold tracking-tight text-white sm:px-4 sm:text-base md:text-lg">
             <IconShell className="bg-teal-500/20 text-teal-200">
               <span className="text-sm font-black">E</span>
@@ -155,8 +171,8 @@ const TopNav = () => {
             ) : null}
           </nav>
         </div>
-        <div className="flex flex-wrap items-center gap-3 md:justify-end">
-          <div className="relative">
+        <div className="grid w-full grid-cols-[auto_1fr] items-start gap-3 md:flex md:w-auto md:flex-wrap md:items-center md:justify-end">
+          <div className="relative" ref={notificationContainerRef}>
             <button
               type="button"
               className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white/85 transition hover:bg-white/15 hover:text-white"
@@ -171,7 +187,7 @@ const TopNav = () => {
             </button>
 
             {isNotificationOpen ? (
-              <div className="absolute right-0 top-full z-[120] mt-2 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl">
+              <div className="fixed left-3 right-3 top-28 z-[120] max-h-[70dvh] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-80 md:max-w-[90vw] md:max-h-none">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <p className="text-sm font-semibold">Activity Notifications</p>
                   <button
@@ -202,7 +218,7 @@ const TopNav = () => {
           </div>
           <Link
             to="/profile"
-            className="inline-flex max-w-[18rem] items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+            className="inline-flex w-full min-w-0 items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 md:max-w-[18rem]"
             aria-label="Open profile"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-black tracking-wide text-white">
@@ -217,7 +233,7 @@ const TopNav = () => {
               </div>
             </div>
           </Link>
-          <button type="button" className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 sm:w-auto" onClick={handleLogout}>
+          <button type="button" className="col-span-2 inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 md:w-auto" onClick={handleLogout}>
             <span className="inline-flex items-center gap-2">
               Logout
               <ArrowRightIcon className="h-4 w-4 rotate-180" />
