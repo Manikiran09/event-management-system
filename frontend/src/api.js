@@ -3,7 +3,6 @@ import axios from "axios";
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
 let sessionApiBaseUrl = "";
 let warmupPromise = null;
-const defaultProductionApiBaseUrl = "https://event-management-system-production-4de7.up.railway.app/api";
 
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {
@@ -26,7 +25,6 @@ const isAbsoluteHttpUrl = (value) => /^https?:\/\//i.test(value || "");
 
 const productionApiCandidates = [
   import.meta.env.VITE_API_BASE_URL || "",
-  defaultProductionApiBaseUrl,
 ]
   .map((value) => normalizeApiBaseUrl(value))
   .filter((value) => isAbsoluteHttpUrl(value));
