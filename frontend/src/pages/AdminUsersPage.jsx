@@ -10,6 +10,18 @@ const initialForm = {
   role: "organizer",
 };
 
+const getSessionBadge = (sessionStatus) => {
+  return sessionStatus === "active"
+    ? {
+        label: "Active",
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      }
+    : {
+        label: "Inactive",
+        className: "border-slate-200 bg-slate-100 text-slate-700",
+      };
+};
+
 const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -312,7 +324,13 @@ const AdminUsersPage = () => {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
                     <span className="rounded-full bg-slate-100 px-2 py-1">{user.accountStatus || "approved"}</span>
+                    <span className={`rounded-full border px-2 py-1 ${getSessionBadge(user.sessionStatus).className}`}>
+                      {getSessionBadge(user.sessionStatus).label}
+                    </span>
                     <span className="rounded-full bg-slate-100 px-2 py-1">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-1">
+                      Last seen: {user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleString() : "-"}
+                    </span>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button type="button" className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 px-4 py-2 text-xs font-bold text-white" onClick={() => startEdit(user)}>
@@ -342,7 +360,9 @@ const AdminUsersPage = () => {
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Status</th>
+                    <th>Account</th>
+                    <th>Session</th>
+                    <th>Last Seen</th>
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -362,6 +382,12 @@ const AdminUsersPage = () => {
                       <td className="px-4 py-3 align-top">{user.email}</td>
                       <td className="px-4 py-3 align-top">{user.role}</td>
                       <td className="px-4 py-3 align-top">{user.accountStatus || "approved"}</td>
+                      <td className="px-4 py-3 align-top">
+                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getSessionBadge(user.sessionStatus).className}`}>
+                          {getSessionBadge(user.sessionStatus).label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top">{user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleString() : "-"}</td>
                       <td className="px-4 py-3 align-top">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</td>
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-wrap gap-3">

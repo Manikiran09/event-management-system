@@ -1,6 +1,7 @@
 import express from "express";
 import {
 	login,
+	logout,
 	register,
 	me,
 	updateProfile,
@@ -19,6 +20,7 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/logout", authRequired, logout);
 router.get("/me", authRequired, me);
 router.patch("/profile", authRequired, updateProfile);
 router.get("/users", authRequired, allowRoles("admin"), listUsers);

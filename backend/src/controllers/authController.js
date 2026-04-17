@@ -18,6 +18,8 @@ const serializeUser = (user) => ({
   email: user.email,
   role: user.role,
   accountStatus: user.accountStatus,
+  sessionStatus: user.sessionStatus || "inactive",
+  lastSeenAt: user.lastSeenAt || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -67,6 +69,8 @@ const register = async (req, res) => {
       password: hashedPassword,
       role,
       accountStatus: isAdminRegistration ? "approved" : "pending",
+      sessionStatus: isAdminRegistration ? "active" : "inactive",
+      lastSeenAt: isAdminRegistration ? new Date() : null,
     });
 
     const token = isAdminRegistration ? createToken(user) : null;
@@ -306,6 +310,10 @@ const login = async (req, res) => {
       return res.status(403).json({ message: "Your account was rejected by admin" });
     }
 
+    user.sessionStatus = "active";
+    user.lastSeenAt = new Date();
+    await user.save();
+
     const token = createToken(user);
 
     return res.json({
@@ -315,6 +323,19 @@ const login = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to login", error: error.message });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user.userId, {
+      sessionStatus: "inactive",
+      lastSeenAt: new Date(),
+    });
+
+    return res.json({ message: "Logout successful" });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to logout", error: error.message });
   }
 };
 
@@ -412,7 +433,7 @@ const updateProfile = async (req, res) => {
 const listUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select("name email role accountStatus createdAt updatedAt statusChangedAt")
+      .select("name email role accountStatus sessionStatus lastSeenAt createdAt updatedAt statusChangedAt")
       .sort({ createdAt: -1 });
     return res.json({ users: users.map(serializeUser) });
   } catch (error) {
@@ -438,6 +459,7 @@ const pendingSignups = async (req, res) => {
 export {
   register,
   login,
+  logout,
   me,
   updateProfile,
   listUsers,

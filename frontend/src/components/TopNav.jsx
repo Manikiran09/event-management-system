@@ -36,8 +36,8 @@ const TopNav = () => {
       location.pathname === path ? "bg-white/10 text-white" : ""
     }`;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 

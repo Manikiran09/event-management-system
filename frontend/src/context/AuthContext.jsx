@@ -47,9 +47,17 @@ const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
+  const logout = async () => {
+    try {
+      if (localStorage.getItem("token")) {
+        await api.post("/auth/logout");
+      }
+    } catch {
+      // Continue local logout even if backend call fails.
+    } finally {
+      localStorage.removeItem("token");
+      setUser(null);
+    }
   };
 
   const value = useMemo(

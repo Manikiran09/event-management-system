@@ -40,6 +40,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    sessionStatus: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "inactive",
+    },
+    lastSeenAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
