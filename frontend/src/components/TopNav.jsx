@@ -4,6 +4,26 @@ import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { ArrowRightIcon, BellIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
 
+const adminNotificationSeenAtKey = "admin_notification_seen_at";
+
+const getAdminNotificationSeenAt = () => {
+  if (typeof window === "undefined") {
+    return Date.now();
+  }
+
+  const raw = window.localStorage.getItem(adminNotificationSeenAtKey);
+  const parsed = Number(raw || 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : Date.now();
+};
+
+const setAdminNotificationSeenAt = (timestamp) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(adminNotificationSeenAtKey, String(timestamp));
+};
+
 const formatRole = (role) => {
   if (!role) {
     return "User";
@@ -25,25 +45,54 @@ const TopNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     if (user?.role !== "admin") {
       setPendingCount(0);
+      setNotificationCount(0);
       return;
     }
 
     let isMounted = true;
 
+    if (typeof window !== "undefined" && !window.localStorage.getItem(adminNotificationSeenAtKey)) {
+      setAdminNotificationSeenAt(Date.now());
+    }
+
     const loadPendingCount = async () => {
       try {
-        const response = await api.get("/auth/users/pending");
+        const [pendingResponse, usersResponse] = await Promise.all([
+          api.get("/auth/users/pending"),
+          api.get("/auth/users"),
+        ]);
+
         if (!isMounted) {
           return;
         }
-        setPendingCount((response.data?.users || []).length);
+
+        const pendingUsers = pendingResponse.data?.users || [];
+        const allUsers = usersResponse.data?.users || [];
+        const seenAt = getAdminNotificationSeenAt();
+
+        const pendingIds = new Set(pendingUsers.map((item) => item.id));
+        const newlyCreatedIds = new Set(
+          allUsers
+            .filter((item) => {
+              const createdAt = item?.createdAt ? new Date(item.createdAt).getTime() : 0;
+              return createdAt > seenAt;
+            })
+            .map((item) => item.id)
+        );
+
+        const mergedNotificationIds = new Set([...pendingIds, ...newlyCreatedIds]);
+
+        setPendingCount(pendingIds.size);
+        setNotificationCount(mergedNotificationIds.size);
       } catch {
         if (isMounted) {
           setPendingCount(0);
+          setNotificationCount(0);
         }
       }
     };
@@ -56,6 +105,11 @@ const TopNav = () => {
       clearInterval(intervalId);
     };
   }, [user?.role]);
+
+  const handleNotificationsClick = () => {
+    setAdminNotificationSeenAt(Date.now());
+    setNotificationCount(pendingCount);
+  };
 
   const initials = (user?.name || "U")
     .split(" ")
@@ -122,11 +176,12 @@ const TopNav = () => {
               to="/admin/users"
               className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white/85 transition hover:bg-white/15 hover:text-white"
               aria-label="Pending signup notifications"
-              title={`Pending signups: ${pendingCount}`}
+              title={`Notifications: ${notificationCount}`}
+              onClick={handleNotificationsClick}
             >
               <BellIcon className="h-5 w-5" />
-              <span className={`absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${pendingCount > 0 ? "bg-rose-500 text-white" : "bg-white/25 text-white/80"}`}>
-                {pendingCount > 99 ? "99+" : pendingCount}
+              <span className={`absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${notificationCount > 0 ? "bg-rose-500 text-white" : "bg-white/25 text-white/80"}`}>
+                {notificationCount > 99 ? "99+" : notificationCount}
               </span>
             </Link>
           ) : null}
