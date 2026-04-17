@@ -13,15 +13,29 @@ L.Icon.Default.mergeOptions({
 
 const defaultCenter = { lat: 20.5937, lng: 78.9629 };
 const institutionHintTerms = ["college", "university", "institute", "school", "company", "organization", "office", "campus"];
+const geocodeLanguage = "en";
 
 const rankSuggestion = (displayName = "") => {
   const value = displayName.toLowerCase();
   return institutionHintTerms.reduce((score, term) => (value.includes(term) ? score + 1 : score), 0);
 };
 
+const buildEnglishAddressLabel = (item) => {
+  const address = item?.address || {};
+  const labelParts = [
+    address.road,
+    address.suburb,
+    address.city || address.town || address.village || address.county,
+    address.state,
+    address.country,
+  ].filter(Boolean);
+
+  return labelParts.join(", ") || item?.display_name || "Unknown place";
+};
+
 const normalizeNominatimItem = (item) => ({
   place_id: `n-${item.place_id}`,
-  display_name: item.display_name,
+  display_name: buildEnglishAddressLabel(item),
   lat: Number(item.lat),
   lon: Number(item.lon),
 });
@@ -46,10 +60,10 @@ const MapClickSelector = ({ onSelect }) => {
       const lng = event.latlng.lng;
 
       try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=${geocodeLanguage}&lat=${lat}&lon=${lng}`;
         const response = await fetch(url);
         const payload = await response.json();
-        const label = payload?.display_name || `Pinned (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+        const label = buildEnglishAddressLabel(payload) || `Pinned (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
         onSelect({ label, lat, lng });
       } catch {
         onSelect({ label: `Pinned (${lat.toFixed(5)}, ${lng.toFixed(5)})`, lat, lng });
@@ -76,9 +90,9 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
     const fetchSuggestions = async () => {
       setSearching(true);
       try {
-        const genericUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
-        const institutionUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(`${query} ${institutionHintTerms.join(" ")}`)}`;
-        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8`;
+        const genericUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&accept-language=${geocodeLanguage}&limit=8&q=${encodeURIComponent(query)}`;
+        const institutionUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&accept-language=${geocodeLanguage}&limit=8&q=${encodeURIComponent(`${query} ${institutionHintTerms.join(" ")}`)}`;
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=${geocodeLanguage}&limit=8`;
 
         const [genericResponse, institutionResponse, photonResponse] = await Promise.allSettled([
           fetch(genericUrl, { signal: controller.signal }),
@@ -178,8 +192,8 @@ const LocationPickerMap = ({ locationValue, coordinates, onLocationChange, onCoo
       <div className="h-64 overflow-hidden rounded-2xl border border-slate-200">
         <MapContainer center={[activeCoordinates.lat, activeCoordinates.lng]} zoom={coordinates ? 13 : 4} style={{ height: "100%", width: "100%" }}>
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='Tiles &copy; Esri, HERE, Garmin, FAO, NOAA, USGS, OpenStreetMap contributors'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
           />
           <MapClickSelector
             onSelect={({ label, lat, lng }) => {
