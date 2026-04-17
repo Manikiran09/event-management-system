@@ -1,9 +1,129 @@
 import axios from "axios";
 
 const runtimeApiBaseUrlStorageKey = "runtime_api_base_url";
+const appNotificationsStorageKey = "app_notifications";
+const appNotificationsChangeEventName = "app_notifications_changed";
+const maxStoredNotifications = 60;
 let sessionApiBaseUrl = "";
 let warmupPromise = null;
 const defaultProductionApiBaseUrl = "";
+
+const getStoredNotifications = () => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(appNotificationsStorageKey);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistNotifications = (notifications) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(appNotificationsStorageKey, JSON.stringify(notifications));
+  window.dispatchEvent(new CustomEvent(appNotificationsChangeEventName));
+};
+
+const deriveModuleName = (requestPath) => {
+  if (!requestPath) {
+    return "System";
+  }
+
+  if (requestPath.includes("/auth")) {
+    return "Users";
+  }
+
+  if (requestPath.includes("/events")) {
+    return "Events";
+  }
+
+  if (requestPath.includes("/registrations")) {
+    return "Registrations";
+  }
+
+  return "System";
+};
+
+const buildDefaultNotificationText = (method, requestPath) => {
+  const actionMap = {
+    post: "created",
+    patch: "updated",
+    put: "updated",
+    delete: "deleted",
+  };
+
+  const action = actionMap[(method || "").toLowerCase()] || "completed";
+  const moduleName = deriveModuleName(requestPath);
+  return `${moduleName} ${action} successfully`;
+};
+
+const shouldTrackSuccessNotification = (config) => {
+  const method = String(config?.method || "").toLowerCase();
+  if (!["post", "patch", "put", "delete"].includes(method)) {
+    return false;
+  }
+
+  const requestPath = String(config?.url || "").toLowerCase();
+  if (!requestPath) {
+    return false;
+  }
+
+  if (requestPath.includes("/health")) {
+    return false;
+  }
+
+  return true;
+};
+
+const pushAppNotification = ({ message, method, requestPath }) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const now = Date.now();
+  const safeMessage = (String(message || "").trim() || buildDefaultNotificationText(method, requestPath)).slice(0, 180);
+  const nextNotification = {
+    id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+    message: safeMessage,
+    module: deriveModuleName(requestPath),
+    method: String(method || "").toUpperCase(),
+    requestPath: requestPath || "",
+    read: false,
+    createdAt: now,
+  };
+
+  const existing = getStoredNotifications();
+  const next = [nextNotification, ...existing].slice(0, maxStoredNotifications);
+  persistNotifications(next);
+};
+
+const getAppNotifications = () => getStoredNotifications();
+
+const getUnreadAppNotificationCount = () => getStoredNotifications().filter((item) => !item.read).length;
+
+const markAllAppNotificationsRead = () => {
+  const notifications = getStoredNotifications();
+  if (notifications.length === 0) {
+    return;
+  }
+
+  persistNotifications(notifications.map((item) => ({ ...item, read: true })));
+};
+
+const clearAppNotifications = () => {
+  persistNotifications([]);
+};
 
 const isIpAddress = (value) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value || "");
 
@@ -279,7 +399,19 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const config = response?.config || {};
+    if (shouldTrackSuccessNotification(config)) {
+      const responseMessage = response?.data?.message || response?.data?.status || "";
+      pushAppNotification({
+        message: responseMessage,
+        method: config.method,
+        requestPath: config.url,
+      });
+    }
+
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     if (!originalRequest) {
@@ -322,5 +454,15 @@ api.interceptors.response.use(
   }
 );
 
-export { clearRuntimeApiBaseUrl, getConfiguredApiBaseUrl, setRuntimeApiBaseUrl, warmupApiBaseUrl };
+export {
+  clearAppNotifications,
+  clearRuntimeApiBaseUrl,
+  getAppNotifications,
+  getConfiguredApiBaseUrl,
+  getUnreadAppNotificationCount,
+  markAllAppNotificationsRead,
+  setRuntimeApiBaseUrl,
+  warmupApiBaseUrl,
+  appNotificationsChangeEventName,
+};
 export default api;

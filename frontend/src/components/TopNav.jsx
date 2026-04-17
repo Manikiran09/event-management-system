@@ -1,27 +1,39 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import api from "../api";
+import {
+  appNotificationsChangeEventName,
+  clearAppNotifications,
+  getAppNotifications,
+  getUnreadAppNotificationCount,
+  markAllAppNotificationsRead,
+} from "../api";
 import { useAuth } from "../context/AuthContext";
 import { ArrowRightIcon, BellIcon, DashboardIcon, EventsIcon, TicketIcon, UsersIcon, IconShell } from "./Icons";
 
-const adminNotificationSeenAtKey = "admin_notification_seen_at";
-
-const getAdminNotificationSeenAt = () => {
-  if (typeof window === "undefined") {
-    return Date.now();
+const formatNotificationTime = (value) => {
+  const timestamp = Number(value || 0);
+  if (!timestamp) {
+    return "Just now";
   }
 
-  const raw = window.localStorage.getItem(adminNotificationSeenAtKey);
-  const parsed = Number(raw || 0);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : Date.now();
-};
+  const diffMs = Date.now() - timestamp;
+  const diffMinutes = Math.floor(diffMs / 60000);
 
-const setAdminNotificationSeenAt = (timestamp) => {
-  if (typeof window === "undefined") {
-    return;
+  if (diffMinutes < 1) {
+    return "Just now";
   }
 
-  window.localStorage.setItem(adminNotificationSeenAtKey, String(timestamp));
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
 };
 
 const formatRole = (role) => {
@@ -44,71 +56,44 @@ const TopNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [pendingCount, setPendingCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== "admin") {
-      setPendingCount(0);
-      setNotificationCount(0);
-      return;
-    }
-
-    let isMounted = true;
-
-    if (typeof window !== "undefined" && !window.localStorage.getItem(adminNotificationSeenAtKey)) {
-      setAdminNotificationSeenAt(Date.now());
-    }
-
-    const loadPendingCount = async () => {
-      try {
-        const [pendingResponse, usersResponse] = await Promise.all([
-          api.get("/auth/users/pending"),
-          api.get("/auth/users"),
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        const pendingUsers = pendingResponse.data?.users || [];
-        const allUsers = usersResponse.data?.users || [];
-        const seenAt = getAdminNotificationSeenAt();
-
-        const pendingIds = new Set(pendingUsers.map((item) => item.id));
-        const newlyCreatedIds = new Set(
-          allUsers
-            .filter((item) => {
-              const createdAt = item?.createdAt ? new Date(item.createdAt).getTime() : 0;
-              return createdAt > seenAt;
-            })
-            .map((item) => item.id)
-        );
-
-        const mergedNotificationIds = new Set([...pendingIds, ...newlyCreatedIds]);
-
-        setPendingCount(pendingIds.size);
-        setNotificationCount(mergedNotificationIds.size);
-      } catch {
-        if (isMounted) {
-          setPendingCount(0);
-          setNotificationCount(0);
-        }
-      }
+    const syncNotifications = () => {
+      const all = getAppNotifications();
+      setNotifications(all.slice(0, 12));
+      setNotificationCount(getUnreadAppNotificationCount());
     };
 
-    loadPendingCount();
-    const intervalId = setInterval(loadPendingCount, 10000);
+    syncNotifications();
+    const handleStorage = () => syncNotifications();
+    window.addEventListener(appNotificationsChangeEventName, handleStorage);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
-      isMounted = false;
-      clearInterval(intervalId);
+      window.removeEventListener(appNotificationsChangeEventName, handleStorage);
+      window.removeEventListener("storage", handleStorage);
     };
-  }, [user?.role]);
+  }, []);
 
-  const handleNotificationsClick = () => {
-    setAdminNotificationSeenAt(Date.now());
-    setNotificationCount(pendingCount);
+  useEffect(() => {
+    setIsNotificationOpen(false);
+  }, [location.pathname]);
+
+  const handleNotificationsToggle = () => {
+    if (!isNotificationOpen) {
+      markAllAppNotificationsRead();
+      setNotificationCount(0);
+    }
+
+    setIsNotificationOpen((prev) => !prev);
+  };
+
+  const handleClearNotifications = () => {
+    clearAppNotifications();
+    setNotificationCount(0);
   };
 
   const initials = (user?.name || "U")
@@ -171,20 +156,50 @@ const TopNav = () => {
           </nav>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end">
-          {user?.role === "admin" ? (
-            <Link
-              to="/admin/users"
+          <div className="relative">
+            <button
+              type="button"
               className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white/85 transition hover:bg-white/15 hover:text-white"
-              aria-label="Pending signup notifications"
+              aria-label="Open activity notifications"
               title={`Notifications: ${notificationCount}`}
-              onClick={handleNotificationsClick}
+              onClick={handleNotificationsToggle}
             >
               <BellIcon className="h-5 w-5" />
               <span className={`absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${notificationCount > 0 ? "bg-rose-500 text-white" : "bg-white/25 text-white/80"}`}>
                 {notificationCount > 99 ? "99+" : notificationCount}
               </span>
-            </Link>
-          ) : null}
+            </button>
+
+            {isNotificationOpen ? (
+              <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                  <p className="text-sm font-semibold">Activity Notifications</p>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-teal-200 hover:text-teal-100"
+                    onClick={handleClearNotifications}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-4 text-sm text-white/70">No notifications yet.</p>
+                  ) : (
+                    notifications.map((item) => (
+                      <div key={item.id} className="border-b border-white/5 px-4 py-3 last:border-b-0">
+                        <p className="text-sm font-medium text-white">{item.message}</p>
+                        <div className="mt-1 flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-white/60">
+                          <span>{item.module}</span>
+                          <span>{formatNotificationTime(item.createdAt)}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
           <Link
             to="/profile"
             className="inline-flex max-w-[18rem] items-center gap-3 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
