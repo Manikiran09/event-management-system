@@ -5,21 +5,81 @@ let sessionApiBaseUrl = "";
 let warmupPromise = null;
 const defaultProductionApiBaseUrl = "";
 
+const isIpAddress = (value) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value || "");
+
+const looksLikeHostWithoutProtocol = (value) => {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+
+  const hostCandidate = value.split("/")[0].trim().toLowerCase();
+  if (!hostCandidate || hostCandidate.includes(" ")) {
+    return false;
+  }
+
+  if (hostCandidate.startsWith("localhost") || hostCandidate.startsWith("127.0.0.1")) {
+    return true;
+  }
+
+  const hostOnly = hostCandidate.split(":")[0];
+  return hostOnly.includes(".") || isIpAddress(hostOnly);
+};
+
 const normalizeApiBaseUrl = (value) => {
   if (!value || typeof value !== "string") {
     return "";
   }
 
-  const trimmed = value.trim().replace(/\/$/, "");
+  const trimmed = value.trim();
   if (!trimmed) {
     return "";
   }
 
-  if (trimmed.endsWith("/api")) {
-    return trimmed;
+  if (trimmed === "/api") {
+    return "/api";
   }
 
-  return `${trimmed}/api`;
+  let candidate = trimmed;
+  if (!/^https?:\/\//i.test(candidate) && !candidate.startsWith("/") && looksLikeHostWithoutProtocol(candidate)) {
+    candidate = `https://${candidate}`;
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    try {
+      const parsed = new URL(candidate);
+      let pathname = (parsed.pathname || "").replace(/\/+$/, "");
+      const lowerPath = pathname.toLowerCase();
+
+      if (lowerPath.endsWith("/api/health")) {
+        pathname = pathname.slice(0, -"/health".length);
+      } else if (lowerPath.endsWith("/health")) {
+        pathname = pathname.slice(0, -"/health".length);
+      }
+
+      pathname = pathname.replace(/\/+$/, "");
+
+      if (!pathname || pathname === "/") {
+        pathname = "/api";
+      } else if (!pathname.toLowerCase().endsWith("/api")) {
+        pathname = `${pathname}/api`;
+      }
+
+      return `${parsed.origin}${pathname}`;
+    } catch {
+      return "";
+    }
+  }
+
+  const normalizedRelative = candidate.replace(/\/$/, "");
+  if (normalizedRelative === "/api") {
+    return normalizedRelative;
+  }
+
+  if (normalizedRelative.endsWith("/api")) {
+    return normalizedRelative;
+  }
+
+  return `${normalizedRelative}/api`;
 };
 
 const isAbsoluteHttpUrl = (value) => /^https?:\/\//i.test(value || "");
@@ -30,8 +90,6 @@ const productionApiCandidates = [
 ]
   .map((value) => normalizeApiBaseUrl(value))
   .filter((value) => isAbsoluteHttpUrl(value));
-
-const isIpAddress = (value) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value || "");
 
 const shouldPreferProxyApi = () => {
   if (import.meta.env.DEV) {
