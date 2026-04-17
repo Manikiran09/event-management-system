@@ -38,6 +38,14 @@ app.get("/health", (req, res) => {
   res.status(200).json(getHealthPayload());
 });
 
+app.get("/healthz", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "alive",
+    uptimeSeconds: Math.round(process.uptime()),
+  });
+});
+
 const normalizeOrigin = (origin) => {
   const value = origin.trim();
 
