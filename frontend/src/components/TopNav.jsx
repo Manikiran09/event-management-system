@@ -115,7 +115,7 @@ const TopNav = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 overflow-x-hidden border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 overflow-visible border-b border-white/20 bg-slate-950/90 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 md:flex-row md:items-center md:justify-between md:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <Link to="/dashboard" className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2 text-sm font-bold tracking-tight text-white sm:px-4 sm:text-base md:text-lg">
@@ -171,7 +171,7 @@ const TopNav = () => {
             </button>
 
             {isNotificationOpen ? (
-              <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl">
+              <div className="absolute right-0 top-full z-[120] mt-2 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <p className="text-sm font-semibold">Activity Notifications</p>
                   <button
